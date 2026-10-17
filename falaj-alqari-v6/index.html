@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>فلج القري</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --c-sand:        #F5F0E8;
+      --c-sand-dark:   #EDE6D6;
+      --c-soil:        #2C1F0E;
+      --c-soil-mid:    #5C3D1E;
+      --c-water:       #1A6B8A;
+      --c-water-light: #E8F4F8;
+      --c-water-mid:   #4A9DB5;
+      --c-flow:        #0D4F6A;
+      --c-palm:        #2D6A2D;
+      --c-palm-light:  #EAF3EA;
+      --c-sun:         #C8841A;
+      --c-sun-light:   #FEF3E2;
+      --c-dusk:        #8B3A62;
+      --c-dusk-light:  #F5EAF1;
+      --c-stone:       #8A7A6A;
+      --c-stone-light: #F0EDE8;
+      --c-danger:      #A83232;
+      --c-danger-light:#FDEAEA;
+      --radius-sm:     6px;
+      --radius-md:     10px;
+      --radius-lg:     16px;
+      --radius-xl:     24px;
+      --shadow-sm:     0 1px 3px rgba(44,31,14,.08);
+      --shadow-md:     0 4px 16px rgba(44,31,14,.10);
+    }
+    html, body, #root {
+      height: 100%;
+      font-family: 'IBM Plex Sans Arabic', sans-serif;
+      background: var(--c-sand);
+      color: var(--c-soil);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    * { -webkit-font-smoothing: antialiased; }
+    button { font-family: inherit; cursor: pointer; }
+    input, textarea, select { font-family: inherit; }
+    .mono { font-family: 'IBM Plex Mono', monospace; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+</html>

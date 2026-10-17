@@ -1,0 +1,282 @@
+import { useState } from 'react'
+import { useApp } from '../hooks/useAppState'
+import { SHARES, AAD_DAYS, SHARE_HOLDERS } from '../data/falajData'
+import { getHolder, holderColor, initials, relTypeLabel } from '../utils/helpers'
+
+/* ═══════════ ADMIN HOME ═══════════ */
+export function AdminHome({ onTab }) {
+  const { t, pendingRegs } = useApp()
+
+  return (
+    <div className="page-content">
+      <div className="metrics-grid">
+        <div className="metric-card">
+          <div className="metric-val">{pendingRegs.length}</div>
+          <div className="metric-lbl">{t('طلبات تسجيل معلقة','Pending registrations')}</div>
+          <div className="metric-badge">
+            {pendingRegs.length > 0
+              ? <span className="badge badge-sun">{t('تحتاج مراجعة','Needs review')}</span>
+              : <span className="badge badge-palm">{t('لا شيء','All clear')}</span>}
+          </div>
+        </div>
+        <div className="metric-card">
+          <div className="metric-val">{SHARE_HOLDERS.length}</div>
+          <div className="metric-lbl">{t('إجمالي الملاك','Total shareholders')}</div>
+          <div className="metric-badge"><span className="badge badge-water">{t('مسجلون','Registered')}</span></div>
+        </div>
+        <div className="metric-card">
+          <div className="metric-val">12</div>
+          <div className="metric-lbl">{t('أيام الدورة','Cycle days')}</div>
+          <div className="metric-badge"><span className="badge badge-stone">{t('ثابتة','Fixed')}</span></div>
+        </div>
+        <div className="metric-card">
+          <div className="metric-val">96</div>
+          <div className="metric-lbl">{t('آثار كل يوم','Athars per day')}</div>
+          <div className="metric-badge"><span className="badge badge-water">{t('إجمالي','Total')}</span></div>
+        </div>
+      </div>
+
+      {pendingRegs.length > 0 && (
+        <div className="warn-box" style={{cursor:'pointer'}} onClick={()=>onTab('registrations')}>
+          <i className="ti ti-alert-circle" style={{fontSize:16, flexShrink:0}} aria-hidden="true"/>
+          <span>{t(`يوجد ${pendingRegs.length} طلب تسجيل بانتظار موافقتك. اضغط للمراجعة.`,
+                    `${pendingRegs.length} registration request(s) awaiting your approval.`)}</span>
+        </div>
+      )}
+
+      <div className="card">
+        <div className="card-head">
+          <span className="card-title">{t('إجراءات سريعة','Quick Actions')}</span>
+        </div>
+        <div className="card-body" style={{display:'flex', flexDirection:'column', gap:8}}>
+          {[
+            { icon:'ti-user-check', label: t('مراجعة طلبات التسجيل','Review Registrations'), tab:'registrations', badge: pendingRegs.length > 0 ? pendingRegs.length : null },
+            { icon:'ti-droplet',    label: t('تعديل توزيعات الفلج','Edit Share Distributions'), tab:'shares' },
+            { icon:'ti-git-branch', label: t('تقسيم حصة الورثة','Split Heir Shares'), tab:'splits' },
+            { icon:'ti-users',      label: t('إدارة الملاك','Manage Shareholders'), tab:'shareholders' },
+          ].map(item => (
+            <button key={item.tab} className="btn btn-outline btn-full"
+              style={{justifyContent:'flex-start', gap:10}} onClick={()=>onTab(item.tab)}>
+              <i className={`ti ${item.icon}`} style={{fontSize:18, color:'var(--c-water)'}} aria-hidden="true"/>
+              <span style={{flex:1, textAlign:'right'}}>{item.label}</span>
+              {item.badge && <span className="badge badge-sun">{item.badge}</span>}
+              <i className="ti ti-chevron-left" style={{fontSize:14, color:'var(--c-stone)'}} aria-hidden="true"/>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════ REGISTRATIONS ═══════════ */
+export function RegistrationsPage() {
+  const { t, pendingRegs, approveReg, rejectReg } = useApp()
+
+  if (pendingRegs.length === 0) return (
+    <div className="page-content">
+      <div style={{textAlign:'center', padding:'40px 20px', color:'var(--c-stone)'}}>
+        <i className="ti ti-circle-check" style={{fontSize:48, color:'var(--c-palm)', display:'block', marginBottom:12}} aria-hidden="true"/>
+        <div style={{fontSize:15, fontWeight:600, color:'var(--c-soil)', marginBottom:6}}>{t('لا توجد طلبات معلقة','No pending requests')}</div>
+        <div style={{fontSize:13}}>{t('جميع طلبات التسجيل تمت معالجتها','All registration requests have been processed')}</div>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="page-content">
+      <div className="section-lbl">{t('طلبات التسجيل المعلقة','Pending Registration Requests')} ({pendingRegs.length})</div>
+      {pendingRegs.map(reg => {
+        const holder = getHolder(reg.requestedHolderId)
+        return (
+          <div className="card" key={reg.id}>
+            <div className="card-body">
+              <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:10}}>
+                <div style={{width:40, height:40, borderRadius:'50%', background:'var(--c-water-light)', color:'var(--c-water)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:600}}>
+                  {initials(reg.fullName)}
+                </div>
+                <div>
+                  <div className="reg-name">{reg.fullName}</div>
+                  <div className="reg-detail">{reg.phone}</div>
+                </div>
+                <span className="badge badge-sun" style={{marginRight:'auto'}}>{t('معلق','Pending')}</span>
+              </div>
+
+              <div style={{display:'flex', flexDirection:'column', gap:4, fontSize:12, color:'var(--c-soil)'}}>
+                <div style={{display:'flex', gap:6}}>
+                  <span style={{color:'var(--c-stone)', minWidth:80}}>{t('يطلب تتبع:','Tracking:')}</span>
+                  <span style={{fontWeight:500}}>{holder.name}</span>
+                </div>
+                <div style={{display:'flex', gap:6}}>
+                  <span style={{color:'var(--c-stone)', minWidth:80}}>{t('الصلة:','Relation:')}</span>
+                  <span>{relTypeLabel(reg.relationType, 'ar')}</span>
+                </div>
+                <div style={{display:'flex', gap:6}}>
+                  <span style={{color:'var(--c-stone)', minWidth:80}}>{t('تاريخ الطلب:','Submitted:')}</span>
+                  <span>{new Date(reg.submittedAt).toLocaleDateString('ar-OM')}</span>
+                </div>
+              </div>
+
+              {reg.relationNote && (
+                <div className="reg-note" style={{marginTop:8}}>
+                  <span style={{color:'var(--c-stone)', fontSize:11}}>{t('ملاحظة: ','Note: ')}</span>
+                  {reg.relationNote}
+                </div>
+              )}
+
+              <div className="btn-row">
+                <button className="btn btn-palm btn-sm" style={{flex:1}} onClick={()=>approveReg(reg.id)}>
+                  <i className="ti ti-check" aria-hidden="true"/>{t('قبول','Approve')}
+                </button>
+                <button className="btn btn-danger btn-sm" style={{flex:1}} onClick={()=>rejectReg(reg.id)}>
+                  <i className="ti ti-x" aria-hidden="true"/>{t('رفض','Reject')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ═══════════ SHARE SPLITS ═══════════ */
+const SPLIT_HOLDER = 'sh26'
+const TOTAL_ATHARS = 11
+
+export function SplitsPage() {
+  const { t } = useApp()
+  const [mode, setMode] = useState('manual')
+  const [heirs, setHeirs] = useState([
+    { name:'سالم بن خلفان الحضرمي', athars:4, startTime:'11:30', endTime:'02:15' },
+    { name:'محمد بن خلفان الحضرمي', athars:4, startTime:'02:15', endTime:'05:45' },
+    { name:'علي بن خلفان الحضرمي',  athars:3, startTime:'05:45', endTime:'08:00' },
+  ])
+  const [saved, setSaved] = useState(false)
+
+  const holder = getHolder(SPLIT_HOLDER)
+  const sumAthars = heirs.reduce((s, h) => s + parseFloat(h.athars || 0), 0)
+  const isValid = Math.abs(sumAthars - TOTAL_ATHARS) < 0.01
+
+  const update = (i, field, val) => {
+    setHeirs(prev => prev.map((h, idx) => idx === i ? {...h, [field]: val} : h))
+  }
+  const remove = (i) => setHeirs(prev => prev.filter((_, idx) => idx !== i))
+  const add = () => setHeirs(prev => [...prev, { name:'وارث جديد', athars:0, startTime:'', endTime:'' }])
+
+  const save = () => {
+    if (!isValid) { alert(t(`المجموع (${sumAthars}) لا يساوي ${TOTAL_ATHARS} آثار`,`Sum (${sumAthars}) ≠ ${TOTAL_ATHARS} athars`)); return }
+    setSaved(true); setTimeout(()=>setSaved(false), 2500)
+  }
+
+  const colors = ['#1A6B8A','#2D6A2D','#C8841A','#8B3A62','#5C3D1E']
+
+  return (
+    <div className="page-content">
+      <div className="card">
+        <div className="card-head">
+          <div>
+            <div className="card-title">{t('تقسيم حصة الورثة','Split Heir Share')}</div>
+            <div style={{fontSize:11, color:'var(--c-stone)', marginTop:2}}>{holder.name} · {t('آد محمد','Aad Muhammad')} · {TOTAL_ATHARS} {t('أثر','athars')}</div>
+          </div>
+          <div style={{display:'flex', gap:3, border:'1px solid rgba(44,31,14,.15)', borderRadius:'var(--radius-md)', overflow:'hidden'}}>
+            {['manual','auto'].map(m => (
+              <button key={m} style={{padding:'4px 10px', fontSize:11, border:'none', background: mode===m?'var(--c-soil)':'transparent', color: mode===m?'#fff':'var(--c-stone)', cursor:'pointer'}} onClick={()=>setMode(m)}>
+                {m==='manual' ? t('يدوي','Manual') : t('تلقائي','Auto')}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="card-body">
+          <div className="info-box" style={{marginBottom:12}}>
+            <i className="ti ti-info-circle" style={{fontSize:15, flexShrink:0}} aria-hidden="true"/>
+            <span style={{fontSize:11}}>
+              {mode==='manual'
+                ? t('الوضع اليدوي: أدخل الآثار والأوقات لكل وارث مباشرةً. يقبل الأعداد الكسرية.','Manual mode: Enter athars and times per heir. Accepts decimals.')
+                : t('الوضع التلقائي: أدخل نسبة كل وارث (%) وسيحسب النظام الآثار.','Auto mode: Enter percentage per heir and the system calculates athars.')}
+            </span>
+          </div>
+
+          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8}}>
+            <span style={{fontSize:12, color:'var(--c-stone)'}}>{t('توزيع الآثار والأوقات','Athar & Time Distribution')}</span>
+            <span style={{fontSize:12, fontWeight:600}} className={isValid?'split-total-ok':'split-total-over'}>
+              {sumAthars} / {TOTAL_ATHARS}
+            </span>
+          </div>
+
+          {heirs.map((h, i) => (
+            <div key={i} className="split-row">
+              <div className="av" style={{background:colors[i%colors.length], width:28, height:28, fontSize:10, flexShrink:0}}>{initials(h.name)}</div>
+              <input style={{flex:1, border:'none', background:'transparent', fontSize:12, color:'var(--c-soil)', fontFamily:'inherit', outline:'none'}}
+                value={h.name} onChange={e=>update(i,'name',e.target.value)}/>
+              <div className="split-bar-wrap">
+                <div className="split-bar" style={{width:`${Math.min(100,(h.athars/TOTAL_ATHARS)*100)}%`, background:colors[i%colors.length]}}/>
+              </div>
+              <input className="split-input" type="number" min="0" max={TOTAL_ATHARS} step="0.5"
+                value={h.athars} onChange={e=>update(i,'athars',parseFloat(e.target.value)||0)}/>
+              <span style={{fontSize:10, color:'var(--c-stone)'}}>أثر</span>
+              <input style={{width:48, fontSize:11, border:'1px solid rgba(44,31,14,.15)', borderRadius:4, padding:'3px 5px', textAlign:'center', fontFamily:'IBM Plex Mono,monospace'}}
+                value={h.startTime} onChange={e=>update(i,'startTime',e.target.value)} placeholder="00:00"/>
+              <span style={{fontSize:10, color:'var(--c-stone)'}}>–</span>
+              <input style={{width:48, fontSize:11, border:'1px solid rgba(44,31,14,.15)', borderRadius:4, padding:'3px 5px', textAlign:'center', fontFamily:'IBM Plex Mono,monospace'}}
+                value={h.endTime} onChange={e=>update(i,'endTime',e.target.value)} placeholder="00:00"/>
+              <button style={{border:'none', background:'none', color:'var(--c-danger)', cursor:'pointer', fontSize:14}} onClick={()=>remove(i)}>✕</button>
+            </div>
+          ))}
+
+          <button style={{display:'flex', alignItems:'center', gap:5, fontSize:12, color:'var(--c-water)', background:'none', border:'none', cursor:'pointer', padding:'6px 0'}} onClick={add}>
+            <i className="ti ti-plus" style={{fontSize:14}} aria-hidden="true"/>
+            {t('إضافة وارث','Add heir')}
+          </button>
+
+          <div style={{marginTop:12, paddingTop:12, borderTop:'1px solid rgba(44,31,14,.06)', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+            <div style={{fontSize:11, color:'var(--c-stone)', display:'flex', alignItems:'center', gap:4}}>
+              <i className="ti ti-lock" style={{fontSize:12}} aria-hidden="true"/>
+              {t('يحتاج موافقة السوبر أدمن','Requires Super Admin approval')}
+            </div>
+            <button className="btn btn-primary btn-sm" onClick={save}>
+              <i className={`ti ti-${saved?'check':'send'}`} aria-hidden="true"/>
+              {saved ? t('تم الإرسال ✓','Sent ✓') : t('إرسال للموافقة','Send for Approval')}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════ SHAREHOLDERS LIST ═══════════ */
+export function ShareholdersPage() {
+  const { t } = useApp()
+  const [query, setQuery] = useState('')
+
+  const filtered = SHARE_HOLDERS.filter(s =>
+    !query || s.name.includes(query) || s.tribe.includes(query)
+  )
+
+  return (
+    <div className="page-content">
+      <div className="search-wrap">
+        <i className="ti ti-search" aria-hidden="true"/>
+        <input value={query} onChange={e=>setQuery(e.target.value)} placeholder={t('بحث باسم الملك أو القبيلة...','Search by name or tribe...')}/>
+        {query && <i className="ti ti-x" style={{cursor:'pointer'}} onClick={()=>setQuery('')} aria-hidden="true"/>}
+      </div>
+      <div className="card">
+        <div style={{maxHeight:500, overflowY:'auto'}}>
+          {filtered.map(sh => (
+            <div key={sh.id} style={{display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderBottom:'1px solid rgba(44,31,14,.05)'}}>
+              <div className="av" style={{background:holderColor(sh.id), width:32, height:32, fontSize:11}}>{initials(sh.name)}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:12.5, fontWeight:500, color:'var(--c-soil)'}}>{sh.name}</div>
+                <div style={{fontSize:11, color:'var(--c-stone)', marginTop:1}}>{sh.tribe}</div>
+              </div>
+              <span className={`badge ${sh.type==='heirs'||sh.type==='joint'?'badge-dusk':sh.type==='mosque'?'badge-water':'badge-stone'}`} style={{fontSize:10}}>
+                {sh.type==='heirs'?t('ورثة','Heirs'):sh.type==='joint'?t('مشترك','Joint'):sh.type==='mosque'?t('مسجد','Mosque'):t('فرد','Individual')}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
