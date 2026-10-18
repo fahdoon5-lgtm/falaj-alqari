@@ -32,39 +32,60 @@ export default function LoginScreen() {
   }
 
   return (
-    <div className="login-screen" dir={lang==='ar'?'rtl':'ltr'}>
-      <div className="login-pattern"/>
+    <div className="login-screen" dir={lang==='ar'?'rtl':'ltr'} style={{padding:0,justifyContent:'flex-start',background:'#0D1F2D'}}>
 
-      <div style={{width:80,height:80,borderRadius:'50%',background:'linear-gradient(135deg,#1A6B8A,#4A9DB5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:36,color:'#fff',boxShadow:'0 8px 40px rgba(26,107,138,.5),0 0 0 12px rgba(26,107,138,.1)',position:'relative',zIndex:1,animation:'logoFloat 4s ease-in-out infinite'}}>
-        <i className="ti ti-droplet"/>
-      </div>
+      {/* Hero image */}
+      <div style={{position:'relative',width:'100%',height:220,overflow:'hidden',flexShrink:0}}>
+        <img
+          src="https://images.unsplash.com/photo-1586348943529-beaae6c28db9?w=800&q=80"
+          alt="فلج"
+          style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'center 60%',filter:'brightness(.55)'}}
+          onError={e=>{e.target.style.display='none'}}
+        />
+        {/* gradient overlay bottom */}
+        <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(13,31,45,0) 30%,rgba(13,31,45,1) 100%)'}}/>
 
-      <div style={{textAlign:'center',position:'relative',zIndex:1}}>
-        <div style={{fontSize:26,fontWeight:700,color:'#fff',letterSpacing:'.02em'}}>
-          {t('فلج القري','Falaj Al-Qari')}
-        </div>
-        <div style={{fontSize:13,color:'rgba(255,255,255,.45)',marginTop:6}}>
-          {t('نظام إدارة توزيع المياه','Water Distribution Management')}
-        </div>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:5,marginTop:12,opacity:.5}}>
-          {[12,18,14,22,16,20,14].map((h,i)=>(
-            <div key={i} style={{width:3,height:h,borderRadius:2,background:'rgba(74,157,181,.9)'}}/>
+        {/* language toggle */}
+        <div style={{position:'absolute',top:16,left:lang==='ar'?16:'auto',right:lang==='ar'?'auto':16,display:'flex',gap:4,zIndex:2}}>
+          {['ar','en'].map(l=>(
+            <button key={l} onClick={()=>setLang(l)} style={{fontSize:11,padding:'4px 9px',borderRadius:7,cursor:'pointer',border:'1.5px solid',borderColor:lang===l?'#fff':'rgba(255,255,255,.3)',background:lang===l?'rgba(255,255,255,.9)':'rgba(0,0,0,.3)',color:lang===l?'#0D1F2D':'rgba(255,255,255,.8)',fontWeight:lang===l?700:400,backdropFilter:'blur(6px)',transition:'all .18s'}}>
+              {l==='ar'?'ع':'EN'}
+            </button>
           ))}
         </div>
+
+        {/* App identity over image */}
+        <div style={{position:'absolute',bottom:18,width:'100%',textAlign:'center',zIndex:2,padding:'0 20px'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:10,marginBottom:6}}>
+            <div style={{width:42,height:42,borderRadius:'50%',background:'linear-gradient(135deg,#1A6B8A,#4A9DB5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,color:'#fff',boxShadow:'0 4px 20px rgba(26,107,138,.6)',border:'2px solid rgba(255,255,255,.25)'}}>
+              <i className="ti ti-droplet-half-2"/>
+            </div>
+            <div style={{textAlign:lang==='ar'?'right':'left'}}>
+              <div style={{fontSize:28,fontWeight:800,color:'#fff',lineHeight:1,letterSpacing:'.01em',textShadow:'0 2px 12px rgba(0,0,0,.5)'}}>
+                {t('أثر','Athar')}
+              </div>
+              <div style={{fontSize:12,color:'rgba(255,255,255,.65)',fontWeight:500,marginTop:2}}>
+                {t('فلج القري','Falaj Al-Qari')}
+              </div>
+            </div>
+          </div>
+          <div style={{display:'inline-flex',alignItems:'center',gap:5,background:'rgba(0,0,0,.35)',backdropFilter:'blur(8px)',borderRadius:20,padding:'5px 14px',border:'1px solid rgba(255,255,255,.12)'}}>
+            <i className="ti ti-map-pin" style={{fontSize:11,color:'#4A9DB5'}}/>
+            <span style={{fontSize:11,color:'rgba(255,255,255,.75)',letterSpacing:'.03em'}}>
+              {t('قرية سيجاء · ولاية سمائل','Sayjah Village · Samail Wilayat')}
+            </span>
+          </div>
+        </div>
       </div>
 
-      <div style={{background:'rgba(255,255,255,.97)',borderRadius:24,padding:24,width:'100%',maxWidth:360,position:'relative',zIndex:1,boxShadow:'0 20px 60px rgba(13,31,45,.4)'}}>
+      <div style={{background:'rgba(255,255,255,.97)',borderRadius:'24px 24px 0 0',padding:24,width:'100%',maxWidth:480,position:'relative',zIndex:1,marginTop:-12,flex:1}}>
 
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
+        <div style={{marginBottom:18}}>
           <div style={{fontSize:13,fontWeight:700,color:'var(--c-soil)'}}>
             {t('اختر حسابك','Select your account')}
           </div>
-          <div style={{display:'flex',gap:4}}>
-            {['ar','en'].map(l=>(
-              <button key={l} onClick={()=>setLang(l)} style={{fontSize:11,padding:'4px 9px',borderRadius:7,cursor:'pointer',border:'1.5px solid',borderColor:lang===l?'#1A6B8A':'rgba(44,31,14,.15)',background:lang===l?'#1A6B8A':'transparent',color:lang===l?'#fff':'#8A7A6A',fontWeight:lang===l?700:400,transition:'all .18s'}}>
-                {l==='ar'?'ع':'EN'}
-              </button>
-            ))}
+          <div style={{fontSize:11,color:'var(--c-stone)',marginTop:3}}>
+            {t('نظام إدارة توزيع مياه الفلج','Falaj water distribution management system')}
           </div>
         </div>
 
@@ -144,8 +165,10 @@ export default function LoginScreen() {
           {t('تسجيل مستخدم جديد','Register New User')}
         </button>
 
-        <div style={{marginTop:14,fontSize:11,color:'var(--c-stone)',textAlign:'center',lineHeight:1.6}}>
-          {t('نظام تجريبي — البيانات من فلج القري الحقيقي بولاية إزكي','Demo — data from the real Falaj Al-Qari, Izki')}
+        <div style={{marginTop:14,fontSize:11,color:'var(--c-stone)',textAlign:'center',lineHeight:1.8}}>
+          {t('نظام تجريبي · البيانات من فلج القري الحقيقي','Demo system · data from the real Falaj Al-Qari')}
+          <br/>
+          <span style={{color:'var(--c-water)',fontWeight:600}}>{t('سيجاء · سمائل · عُمان','Sayjah · Samail · Oman')}</span>
         </div>
       </div>
     </div>
