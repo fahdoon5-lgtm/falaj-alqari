@@ -116,7 +116,6 @@ function AppShell({ tabs, homeRenderer }) {
 }
 
 function BeneficiaryApp() {
-  const { t } = useApp()
   return (
     <AppShell tabs={BENEFICIARY_TABS} homeRenderer={(push) => (
       <BeneficiaryHome

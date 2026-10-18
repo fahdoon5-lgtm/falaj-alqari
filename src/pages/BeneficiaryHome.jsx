@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, memo } from 'react'
 import { useApp } from '../hooks/useAppState'
 import { useCycle } from '../hooks/useCycleSettings'
 import { AAD_DAYS, SHARES } from '../data/falajData'
@@ -15,7 +15,7 @@ const TRIBE_COLORS = {
   'default':'linear-gradient(135deg,#1A6B8A,#2D6A2D)',
 }
 
-function ProfileCard({ user }) {
+const ProfileCard = memo(function ProfileCard({ user }) {
   const { t } = useApp()
   const holder = getHolder(user.holderId)
   const ini    = initials(user.fullName)
@@ -51,7 +51,7 @@ function ProfileCard({ user }) {
       </div>
     </div>
   )
-}
+})
 
 export default function BeneficiaryHome({ onTabChange, onPush }) {
   const { currentUser, t, lang, logReminder } = useApp()
@@ -63,8 +63,21 @@ export default function BeneficiaryHome({ onTabChange, onPush }) {
     return () => clearInterval(timer)
   }, [])
 
-  const info    = getCurrentAadInfo(cycleStart, now)
-  const myTurns = getMyTurns(currentUser.holderId, cycleStart, now)
+  const info = getCurrentAadInfo(cycleStart, now)
+
+  // P-2: memoize stable turn schedule (realStart/realEnd don't change with now)
+  const turnSchedule = useMemo(
+    () => getMyTurns(currentUser.holderId, cycleStart),
+    [currentUser.holderId, cycleStart]
+  )
+  // Re-derive time-based flags every tick from cached schedule
+  const myTurns = turnSchedule.map(turn => ({
+    ...turn,
+    isPast:  turn.realEnd < now,
+    isNow:   turn.realStart <= now && now < turn.realEnd,
+    isSoon:  turn.realEnd >= now && turn.realStart > now && (turn.realStart - now) < 24 * 3600_000,
+    msUntil: Math.max(0, turn.realStart - now),
+  }))
 
   const currentAad   = info ? AAD_DAYS[info.aadIndex] : null
   const nextMyTurn   = myTurns.find(t => !t.isPast)

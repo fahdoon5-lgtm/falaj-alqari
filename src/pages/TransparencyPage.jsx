@@ -1,14 +1,28 @@
 import { useState } from 'react'
 import { useApp } from '../hooks/useAppState'
+import { useCycle } from '../hooks/useCycleSettings'
 import { AAD_DAYS, SHARES } from '../data/falajData'
 import { getHolder, holderColor, initials } from '../utils/helpers'
-
-const CURRENT_AAD = 'muhammad'
-const NOW_ORDER   = 3
+import { getCurrentAadInfo, resolveShareTimes } from '../utils/cycleEngine'
 
 export default function TransparencyPage() {
   const { currentUser, t } = useApp()
-  const [selectedAad, setSelectedAad] = useState(CURRENT_AAD)
+  const { cycleStart } = useCycle()
+  const [now] = useState(() => new Date())
+  const info = getCurrentAadInfo(cycleStart, now)
+
+  // Live current Aad and currently-active slot order
+  const CURRENT_AAD = info?.aadId ?? null
+  let NOW_ORDER = null
+  if (info && CURRENT_AAD) {
+    const aadShares = SHARES[CURRENT_AAD] || []
+    for (const s of aadShares) {
+      const times = resolveShareTimes(info.aadStartTime, s.startTime, s.endTime)
+      if (times.start <= now && now < times.end) { NOW_ORDER = s.order; break }
+    }
+  }
+
+  const [selectedAad, setSelectedAad] = useState(CURRENT_AAD || (AAD_DAYS[0]?.id ?? ''))
   const [query, setQuery] = useState('')
 
   const shares = SHARES[selectedAad] || []

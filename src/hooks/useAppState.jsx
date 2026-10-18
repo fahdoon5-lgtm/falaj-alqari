@@ -10,6 +10,7 @@ export function AppProvider({ children }) {
   const [pendingRegs, setPendingRegs] = useState(PENDING_REGISTRATIONS)
   const [notifications, setNotifications] = useState(NOTIFICATIONS_MOCK)
   const [reminderLogs, setReminderLogs] = useState([])
+  const [auditLogs, setAuditLogs] = useState([])
 
   const login = (userId) => {
     const user = USERS_MOCK.find(u => u.id === userId)
@@ -19,10 +20,19 @@ export function AppProvider({ children }) {
 
   const t = (ar, en) => lang === 'ar' ? ar : en
 
+  const logAudit = ({ actor, action, entity }) => {
+    const at = new Date().toLocaleString('ar-OM')
+    setAuditLogs(prev => [{ actor, action, entity, at }, ...prev])
+  }
+
   const approveReg = (regId) => {
+    const reg = pendingRegs.find(r => r.id === regId)
+    if (reg) logAudit({ actor: currentUser?.fullName || '—', action: 'اعتماد تسجيل', entity: reg.fullName })
     setPendingRegs(prev => prev.filter(r => r.id !== regId))
   }
   const rejectReg = (regId) => {
+    const reg = pendingRegs.find(r => r.id === regId)
+    if (reg) logAudit({ actor: currentUser?.fullName || '—', action: 'رفض تسجيل', entity: reg.fullName })
     setPendingRegs(prev => prev.filter(r => r.id !== regId))
   }
 
@@ -43,6 +53,7 @@ export function AppProvider({ children }) {
       pendingRegs, approveReg, rejectReg,
       notifications, markNotifRead, unreadCount,
       reminderLogs, logReminder,
+      auditLogs, logAudit,
     }}>
       {children}
     </AppCtx.Provider>

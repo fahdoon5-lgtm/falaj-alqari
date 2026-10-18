@@ -1,30 +1,36 @@
 import { useState } from 'react'
 import { useApp } from '../hooks/useAppState'
+import { useCycle } from '../hooks/useCycleSettings'
 import { AAD_DAYS, SHARES } from '../data/falajData'
 import { formatAtharDuration } from '../utils/helpers'
-
-const CURRENT_ORDER = 3
+import { getCurrentAadInfo } from '../utils/cycleEngine'
 
 /* ═══════════ MY CYCLE ═══════════ */
 export function MyCyclePage() {
-  const { currentUser, t } = useApp()
+  const { currentUser, t, lang } = useApp()
+  const { cycleStart } = useCycle()
+  const [now] = useState(() => new Date())
+  const info = getCurrentAadInfo(cycleStart, now)
+
+  // Dynamic month badge from cycle start
+  const monthLabel = info
+    ? new Date(info.aadStartTime).toLocaleDateString(lang === 'ar' ? 'ar-OM' : 'en-OM', { month: 'long', year: 'numeric' })
+    : t('—', '—')
 
   return (
     <div className="page-content">
       <div className="card">
         <div className="card-head">
           <span className="card-title">{t('دورتي الكاملة — 12 يوماً','My Full Cycle — 12 Days')}</span>
-          <span className="badge badge-water">
-            {t('سبتمبر 2024','September 2024')}
-          </span>
+          <span className="badge badge-water">{monthLabel}</span>
         </div>
         <div className="card-body">
           <div className="timeline">
             {AAD_DAYS.map((day, i) => {
               const sh = SHARES[day.id]?.filter(s => s.holderId === currentUser.holderId) || []
               const hasShare = sh.length > 0
-              const isCurrent = i === CURRENT_ORDER - 1
-              const isPast = i < CURRENT_ORDER - 1
+              const isCurrent = i === (info?.aadIndex ?? -1)
+              const isPast = i < (info?.aadIndex ?? -1)
 
               return (
                 <div className="tl-item" key={day.id}>
@@ -129,13 +135,18 @@ export function FarmsPage() {
 
 /* ═══════════ NOTES ═══════════ */
 export function NotesPage() {
-  const { t } = useApp()
-  const [note, setNote] = useState(
-    'العامل: سعيد — رقمه محفوظ.\nالدور القادم: فتح قناة الشمال أولاً.\nآد الخيلانين: 21.5 أثر — تجهيز البستان مسبقاً.'
-  )
+  const { t, currentUser } = useApp()
+  const storageKey = `falaj_notes_${currentUser?.id || 'guest'}`
+  const [note, setNote] = useState(() => {
+    try { return localStorage.getItem(storageKey) ?? 'العامل: سعيد — رقمه محفوظ.\nالدور القادم: فتح قناة الشمال أولاً.\nآد الخيلانين: 21.5 أثر — تجهيز البستان مسبقاً.' }
+    catch { return '' }
+  })
   const [saved, setSaved] = useState(false)
 
-  const save = () => { setSaved(true); setTimeout(()=>setSaved(false), 2000) }
+  const save = () => {
+    try { localStorage.setItem(storageKey, note) } catch {}
+    setSaved(true); setTimeout(() => setSaved(false), 2000)
+  }
 
   return (
     <div className="page-content">

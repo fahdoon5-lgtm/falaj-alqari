@@ -6,7 +6,7 @@ import { getCurrentAadInfo, formatCountdown } from '../utils/cycleEngine'
 
 export function SuperAdminHome({ onTab }) {
   const { t, pendingRegs } = useApp()
-  const { cycleStart, lastUpdatedAt } = useCycle()
+  const { cycleStart, settings } = useCycle()
   const [now] = useState(new Date())
   const info = getCurrentAadInfo(cycleStart, now)
 
@@ -44,7 +44,7 @@ export function SuperAdminHome({ onTab }) {
           <button onClick={()=>onTab('cycle_settings')} style={{marginTop:12,width:'100%',padding:'8px',borderRadius:10,background:'rgba(255,255,255,.1)',border:'1px solid rgba(255,255,255,.15)',color:'rgba(255,255,255,.8)',fontSize:12,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6,transition:'background .15s',position:'relative',zIndex:1}}>
             <i className="ti ti-settings" style={{fontSize:14}}/>
             {t('تعديل بداية الدورة','Edit cycle start')}
-            {lastUpdatedAt && <span style={{fontSize:10,opacity:.6,marginRight:6}}>({lastUpdatedAt.toLocaleDateString('ar-OM',{day:'numeric',month:'short'})})</span>}
+            {settings?.updatedAt && <span style={{fontSize:10,opacity:.6,marginRight:6}}>({settings.updatedAt.toLocaleDateString('ar-OM',{day:'numeric',month:'short'})})</span>}
           </button>
         </div>
       )}
@@ -123,16 +123,25 @@ export function BroadcastPage() {
   )
 }
 
+const SAMPLE_AUDIT_LOGS = [
+  { actor:'أحمد الرمضاني', action:'اعتماد تسجيل',      entity:'محمد بن خلفان',      at:'2024-09-02 10:30' },
+  { actor:'سيف الرمضاني',  action:'تعديل بداية الدورة', entity:'آد عبد — 1 سبتمبر',  at:'2024-09-01 11:25' },
+  { actor:'أحمد الرمضاني', action:'رفض تسجيل',          entity:'طلب غير مكتمل',       at:'2024-08-30 09:15' },
+]
+
 export function AuditPage() {
-  const { t } = useApp()
-  const logs = [
-    { actor:'أحمد الرمضاني', action:'اعتماد تسجيل',      entity:'محمد بن خلفان',      at:'2024-09-02 10:30' },
-    { actor:'سيف الرمضاني',  action:'تعديل بداية الدورة', entity:'آد عبد — 1 سبتمبر',  at:'2024-09-01 11:25' },
-    { actor:'أحمد الرمضاني', action:'رفض تسجيل',          entity:'طلب غير مكتمل',       at:'2024-08-30 09:15' },
-  ]
+  const { t, auditLogs } = useApp()
+  const logs = auditLogs.length > 0 ? auditLogs : SAMPLE_AUDIT_LOGS
+  const isSample = auditLogs.length === 0
   return (
     <div className="page-content">
       <div className="section-lbl">{t('سجل التدقيق — آخر العمليات','Audit Log — Recent Operations')}</div>
+      {isSample && (
+        <div className="info-box" style={{marginBottom:8}}>
+          <i className="ti ti-info-circle" style={{fontSize:15,flexShrink:0}}/>
+          <span style={{fontSize:12}}>{t('لا توجد عمليات مسجلة بعد — يُعرض هنا مثال توضيحي.','No operations recorded yet — showing a sample below.')}</span>
+        </div>
+      )}
       <div className="card">
         {logs.map((l,i) => (
           <div key={i} style={{padding:'12px 14px',borderBottom:'1px solid rgba(44,31,14,.06)'}}>

@@ -9,10 +9,15 @@ const DEMO_USERS = [
   { id:'u03', label:'سيف بن خلفان الرمضاني',  labelEn:'Saif bin Khalfan Al-Ramdani', role:'سوبر أدمن', roleEn:'Super Admin',  color:'#7A3055', bg:'linear-gradient(135deg,#7A3055,#A84A7A)', icon:'ti-shield-star', desc:'الرمضاني', descEn:'Al-Ramdani Tribe' },
 ]
 
+const DEMO_SUPER_PIN = '1234'
+
 export default function LoginScreen() {
   const { login, lang, setLang, t } = useApp()
   const [screen, setScreen] = useState('login') // login | register | success
   const [lastReg, setLastReg] = useState(null)
+  const [pendingUser, setPendingUser] = useState(null)
+  const [pin, setPin] = useState('')
+  const [pinError, setPinError] = useState(false)
 
   if (screen === 'register') {
     return (
@@ -63,12 +68,47 @@ export default function LoginScreen() {
           </div>
         </div>
 
+        {/* PIN gate for super admin */}
+        {pendingUser === 'u03' && (
+          <div style={{marginBottom:14,padding:'14px 16px',borderRadius:14,background:'rgba(122,48,85,.06)',border:'1.5px solid rgba(122,48,85,.2)'}}>
+            <div style={{fontSize:12,fontWeight:700,color:'#7A3055',marginBottom:10,display:'flex',alignItems:'center',gap:6}}>
+              <i className="ti ti-shield-star" style={{fontSize:14}}/>
+              {t('أدخل رمز سوبر أدمن','Enter super admin PIN')}
+            </div>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={6}
+              className="form-input"
+              value={pin}
+              onChange={e=>{ setPin(e.target.value); setPinError(false) }}
+              placeholder={t('الرمز السري','PIN')}
+              style={{letterSpacing:8,fontSize:20,textAlign:'center',marginBottom:8}}
+              autoFocus
+            />
+            {pinError && (
+              <div style={{fontSize:11,color:'#C0392B',textAlign:'center',marginBottom:8}}>
+                {t('رمز خاطئ — حاول مجدداً','Wrong PIN — try again')}
+              </div>
+            )}
+            <div style={{display:'flex',gap:8}}>
+              <button className="btn btn-outline btn-sm" style={{flex:1}} onClick={()=>{ setPendingUser(null); setPin(''); setPinError(false) }}>
+                {t('إلغاء','Cancel')}
+              </button>
+              <button className="btn btn-primary btn-sm" style={{flex:1,background:'#7A3055',borderColor:'#7A3055'}}
+                onClick={()=>{ if(pin===DEMO_SUPER_PIN){ login('u03'); setPendingUser(null); setPin('') } else { setPinError(true); setPin('') } }}>
+                {t('دخول','Enter')}
+              </button>
+            </div>
+          </div>
+        )}
+
         <div style={{display:'flex',flexDirection:'column',gap:10}}>
           {DEMO_USERS.map(u => {
             const name = lang==='ar'?u.label:u.labelEn
             const ini  = name.split(' ').slice(0,2).map(w=>w[0]).join('')
             return (
-              <button key={u.id} className="login-demo-btn" onClick={()=>login(u.id)}>
+              <button key={u.id} className="login-demo-btn" onClick={()=> u.id==='u03' ? setPendingUser('u03') : login(u.id)}>
                 <div style={{width:46,height:46,borderRadius:'50%',background:u.bg,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,fontWeight:700,flexShrink:0,boxShadow:`0 4px 14px ${u.color}50`,border:'2px solid rgba(255,255,255,.6)'}}>
                   {ini}
                 </div>

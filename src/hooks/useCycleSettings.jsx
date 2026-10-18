@@ -16,9 +16,13 @@ function load() {
     const saved = localStorage.getItem('falaj_cycle_v2')
     if (!saved) return null
     const { currentAadId, aadStartedAt, updatedBy, updatedAt } = JSON.parse(saved)
+    // Schema validation: reject corrupted or tampered values
+    if (!AAD_DAYS.find(d => d.id === currentAadId)) return null
+    const parsedStart = new Date(aadStartedAt)
+    if (isNaN(parsedStart.getTime())) return null
     return {
       currentAadId,
-      aadStartedAt: new Date(aadStartedAt),
+      aadStartedAt: parsedStart,
       updatedBy,
       updatedAt: new Date(updatedAt),
     }

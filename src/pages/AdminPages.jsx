@@ -1,7 +1,10 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useApp } from '../hooks/useAppState'
 import { SHARES, AAD_DAYS, SHARE_HOLDERS } from '../data/falajData'
 import { getHolder, holderColor, initials, relTypeLabel } from '../utils/helpers'
+
+// Computed once from domain data — stays correct if share data changes
+const ATHARS_PER_DAY = (SHARES[AAD_DAYS[0]?.id] || []).reduce((s, sh) => s + sh.athars, 0) || 96
 
 /* ═══════════ ADMIN HOME ═══════════ */
 export function AdminHome({ onTab }) {
@@ -30,7 +33,7 @@ export function AdminHome({ onTab }) {
           <div className="metric-badge"><span className="badge badge-stone">{t('ثابتة','Fixed')}</span></div>
         </div>
         <div className="metric-card">
-          <div className="metric-val">96</div>
+          <div className="metric-val">{ATHARS_PER_DAY}</div>
           <div className="metric-lbl">{t('آثار كل يوم','Athars per day')}</div>
           <div className="metric-badge"><span className="badge badge-water">{t('إجمالي','Total')}</span></div>
         </div>
@@ -71,7 +74,7 @@ export function AdminHome({ onTab }) {
 
 /* ═══════════ REGISTRATIONS ═══════════ */
 export function RegistrationsPage() {
-  const { t, pendingRegs, approveReg, rejectReg } = useApp()
+  const { t, lang, pendingRegs, approveReg, rejectReg } = useApp()
 
   if (pendingRegs.length === 0) return (
     <div className="page-content">
@@ -109,7 +112,7 @@ export function RegistrationsPage() {
                 </div>
                 <div style={{display:'flex', gap:6}}>
                   <span style={{color:'var(--c-stone)', minWidth:80}}>{t('الصلة:','Relation:')}</span>
-                  <span>{relTypeLabel(reg.relationType, 'ar')}</span>
+                  <span>{relTypeLabel(reg.relationType, lang)}</span>
                 </div>
                 <div style={{display:'flex', gap:6}}>
                   <span style={{color:'var(--c-stone)', minWidth:80}}>{t('تاريخ الطلب:','Submitted:')}</span>
@@ -141,12 +144,11 @@ export function RegistrationsPage() {
 }
 
 /* ═══════════ SHARE SPLITS ═══════════ */
-const SPLIT_HOLDER = 'sh26'
-const TOTAL_ATHARS = 11
-
 export function SplitsPage() {
   const { t } = useApp()
   const [mode, setMode] = useState('manual')
+  const [splitHolderId, setSplitHolderId] = useState('sh26')
+  const [splitAadId, setSplitAadId]       = useState('muhammad')
   const [heirs, setHeirs] = useState([
     { name:'سالم بن خلفان الحضرمي', athars:4, startTime:'11:30', endTime:'02:15' },
     { name:'محمد بن خلفان الحضرمي', athars:4, startTime:'02:15', endTime:'05:45' },
@@ -154,7 +156,13 @@ export function SplitsPage() {
   ])
   const [saved, setSaved] = useState(false)
 
-  const holder = getHolder(SPLIT_HOLDER)
+  const holder = getHolder(splitHolderId)
+  // Total athars for selected holder in selected Aad day
+  const TOTAL_ATHARS = useMemo(() => {
+    const dayShares = (SHARES[splitAadId] || []).filter(s => s.holderId === splitHolderId)
+    return dayShares.reduce((sum, s) => sum + s.athars, 0) || 11
+  }, [splitHolderId, splitAadId])
+
   const sumAthars = heirs.reduce((s, h) => s + parseFloat(h.athars || 0), 0)
   const isValid = Math.abs(sumAthars - TOTAL_ATHARS) < 0.01
 
@@ -175,9 +183,23 @@ export function SplitsPage() {
     <div className="page-content">
       <div className="card">
         <div className="card-head">
-          <div>
+          <div style={{flex:1}}>
             <div className="card-title">{t('تقسيم حصة الورثة','Split Heir Share')}</div>
-            <div style={{fontSize:11, color:'var(--c-stone)', marginTop:2}}>{holder.name} · {t('آد محمد','Aad Muhammad')} · {TOTAL_ATHARS} {t('أثر','athars')}</div>
+            <div style={{display:'flex', gap:6, marginTop:6, flexWrap:'wrap'}}>
+              <select value={splitHolderId} onChange={e=>{setSplitHolderId(e.target.value);setHeirs([])}}
+                style={{fontSize:11,border:'1px solid rgba(44,31,14,.15)',borderRadius:6,padding:'3px 6px',background:'#fff',color:'var(--c-soil)',maxWidth:160}}>
+                {SHARE_HOLDERS.map(sh=>(
+                  <option key={sh.id} value={sh.id}>{sh.name}</option>
+                ))}
+              </select>
+              <select value={splitAadId} onChange={e=>{setSplitAadId(e.target.value);setHeirs([])}}
+                style={{fontSize:11,border:'1px solid rgba(44,31,14,.15)',borderRadius:6,padding:'3px 6px',background:'#fff',color:'var(--c-soil)'}}>
+                {AAD_DAYS.map(d=>(
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+              <span style={{fontSize:11,color:'var(--c-stone)',alignSelf:'center'}}>{TOTAL_ATHARS} {t('أثر','athars')}</span>
+            </div>
           </div>
           <div style={{display:'flex', gap:3, border:'1px solid rgba(44,31,14,.15)', borderRadius:'var(--radius-md)', overflow:'hidden'}}>
             {['manual','auto'].map(m => (
@@ -250,8 +272,9 @@ export function ShareholdersPage() {
   const { t } = useApp()
   const [query, setQuery] = useState('')
 
-  const filtered = SHARE_HOLDERS.filter(s =>
-    !query || s.name.includes(query) || s.tribe.includes(query)
+  const filtered = useMemo(
+    () => SHARE_HOLDERS.filter(s => !query || s.name.includes(query) || s.tribe.includes(query)),
+    [query]
   )
 
   return (
