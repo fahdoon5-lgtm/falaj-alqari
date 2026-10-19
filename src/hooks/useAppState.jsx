@@ -87,6 +87,21 @@ export function AppProvider({ children }) {
     setReminderLogs(prev => [entry, ...prev])
   }
 
+  // ─── Avatar upload ────────────────────────────────────────────────────────
+  const updateAvatar = (userId, avatarDataUrl) => {
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, avatar: avatarDataUrl } : u))
+  }
+
+  // ─── Edit registered user's display name ─────────────────────────────────
+  const updateUserName = (userId, newName, oldName) => {
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, fullName: newName } : u))
+    logAudit({
+      actor: currentUser?.fullName || '—',
+      action: 'تعديل اسم مستخدم مسجّل',
+      entity: `${oldName} ← ${newName}`,
+    })
+  }
+
   // ─── Name-change: direct edit by admin ────────────────────────────────────
   const directEditName = ({ holderId, currentName, newName, reason, note }) => {
     setHolderNames(prev => ({ ...prev, [holderId]: newName }))
@@ -148,6 +163,7 @@ export function AppProvider({ children }) {
     <AppCtx.Provider value={{
       currentUser, login, loginWithCredentials, logout,
       users, loginLogs,
+      updateAvatar, updateUserName,
       lang, setLang, t,
       pendingRegs, approveReg, rejectReg,
       notifications, markNotifRead, unreadCount,

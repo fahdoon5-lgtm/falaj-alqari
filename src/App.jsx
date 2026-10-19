@@ -9,7 +9,7 @@ import BeneficiaryHome from './pages/BeneficiaryHome'
 import TransparencyPage from './pages/TransparencyPage'
 import { MyCyclePage, FarmsPage, NotesPage } from './pages/BeneficiaryPages'
 import { AdminHome, RegistrationsPage, SplitsPage, ShareholdersPage, LoginLogsPage } from './pages/AdminPages'
-import { SuperAdminHome, BroadcastPage, AuditPage } from './pages/SuperAdminPages'
+import { SuperAdminHome, BroadcastPage, AuditPage, UsersManagePage } from './pages/SuperAdminPages'
 import CycleSettingsPage from './pages/CycleSettingsPage'
 
 const BENEFICIARY_TABS = [
@@ -44,6 +44,7 @@ function renderPage(tab, page) {
       case 'broadcast':      return <BroadcastPage/>
       case 'audit':          return <AuditPage/>
       case 'login_logs':     return <LoginLogsPage/>
+      case 'users_manage':   return <UsersManagePage/>
       case 'cycle_settings': return <CycleSettingsPage/>
       default: break
     }
@@ -58,6 +59,7 @@ function renderPage(tab, page) {
     case 'shareholders':   return <ShareholdersPage/>
     case 'audit':          return <AuditPage/>
     case 'login_logs':     return <LoginLogsPage/>
+    case 'users_manage':   return <UsersManagePage/>
     case 'cycle_admin':    return <CycleSettingsPage/>
     default:               return null
   }
@@ -73,6 +75,7 @@ function AppShell({ tabs, homeRenderer }) {
     farms:'مزارعي', notes:'ملاحظاتي', registrations:'طلبات التسجيل',
     splits:'تقسيم الحصص', shareholders:'الملاك', audit:'سجل التدقيق',
     broadcast:'إشعار جماعي', cycle_admin:'إعدادات الدورة', cycle_settings:'إعدادات الدورة',
+    users_manage:'إدارة المستخدمين', login_logs:'السجلات',
   }
 
   const page    = current?.page || null
@@ -154,10 +157,11 @@ function SuperAdminApp() {
         const titles = {
           registrations: t('طلبات التسجيل','Registrations'),
           splits:        t('تقسيم الحصص','Share Splits'),
-          shareholders:  t('إدارة الملاك','Shareholders'),
+          shareholders:  t('أسماء الملاك','Shareholders'),
           broadcast:     t('إشعار جماعي','Broadcast'),
           audit:         t('سجل التدقيق','Audit Log'),
           cycle_settings:t('إعدادات الدورة','Cycle Settings'),
+          users_manage:  t('إدارة المستخدمين','Manage Users'),
         }
         push(page, titles[page] || page)
       }}/>

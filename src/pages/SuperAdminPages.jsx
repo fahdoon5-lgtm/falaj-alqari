@@ -5,28 +5,51 @@ import { AAD_DAYS, SHARE_HOLDERS } from '../data/falajData'
 import { getCurrentAadInfo, formatCountdown } from '../utils/cycleEngine'
 
 export function SuperAdminHome({ onTab }) {
-  const { t, pendingRegs } = useApp()
+  const { t, pendingRegs, users } = useApp()
   const { cycleStart, settings } = useCycle()
   const [now] = useState(new Date())
   const info = getCurrentAadInfo(cycleStart, now)
 
-  const actions = [
-    { icon:'ti-clock-edit',      label:t('إعدادات الدورة — ضبط بداية الآد','Cycle Settings — Set Aad start'), tab:'cycle_settings', color:'#1A6B8A', highlight:true },
-    { icon:'ti-user-check',      label:t('طلبات التسجيل','Registrations'),      tab:'registrations', badge:pendingRegs.length||null, color:'#C8841A' },
-    { icon:'ti-git-branch',      label:t('تقسيم الحصص','Share Splits'),         tab:'splits',        color:'#2D6A2D' },
-    { icon:'ti-arrows-exchange', label:t('المقايضات','Swaps'),                  tab:'swaps',         color:'#8B3A62' },
-    { icon:'ti-chart-bar',       label:t('التقارير الإحصائية','Reports'),       tab:'reports',       color:'#5C3D1E' },
-    { icon:'ti-shield-check',    label:t('سجل التدقيق','Audit Log'),            tab:'audit',         color:'#0D4F6A' },
-    { icon:'ti-file-text',       label:t('أرشيف الوثائق','Documents Archive'), tab:'documents',     color:'#993C1D' },
-    { icon:'ti-send',            label:t('إشعارات جماعية','Broadcast'),         tab:'broadcast',     color:'#6B4A2D' },
+  const activeUsers   = users.filter(u => u.status === 'active' && u.role !== 'super_admin')
+  const beneficiaries = users.filter(u => u.role === 'beneficiary')
+  const admins        = users.filter(u => u.role === 'admin')
+
+  // Grouped actions for the control panel
+  const groups = [
+    {
+      title: t('إدارة المستخدمين','User Management'),
+      color: '#C8841A',
+      items: [
+        { icon:'ti-user-check',  label:t('طلبات التسجيل','Registrations'),           tab:'registrations', badge:pendingRegs.length||null, color:'#C8841A' },
+        { icon:'ti-users-group', label:t('إدارة المستخدمين المسجّلين','Manage Users'), tab:'users_manage',  color:'#7A3055' },
+      ],
+    },
+    {
+      title: t('إدارة الأسماء والحصص','Names & Shares'),
+      color: '#1A6B8A',
+      items: [
+        { icon:'ti-users',        label:t('أسماء الملاك — تعديل مباشر','Shareholders — Direct Edit'), tab:'shareholders', color:'#1A6B8A' },
+        { icon:'ti-git-branch',   label:t('تقسيم الحصص','Share Splits'),                              tab:'splits',       color:'#2D6A2D' },
+      ],
+    },
+    {
+      title: t('إعدادات النظام','System Settings'),
+      color: '#0D4F6A',
+      items: [
+        { icon:'ti-clock-edit',  label:t('إعدادات الدورة — ضبط بداية الآد','Cycle Settings'), tab:'cycle_settings', color:'#1A6B8A', highlight:true },
+        { icon:'ti-send',        label:t('إشعارات جماعية','Broadcast'),                        tab:'broadcast',      color:'#6B4A2D' },
+        { icon:'ti-shield-check',label:t('سجل التدقيق','Audit Log'),                           tab:'audit',          color:'#0D4F6A' },
+      ],
+    },
   ]
 
   return (
     <div className="page-content">
 
-      {/* Cycle Status */}
+      {/* Cycle Status Card */}
       {info && (
-        <div style={{background:'linear-gradient(135deg,#0D1F2D,#1a3a4a)',borderRadius:20,padding:16,color:'#fff',position:'relative',overflow:'hidden',boxShadow:'0 8px 32px rgba(13,31,45,.3)'}}>
+        <div style={{background:'linear-gradient(135deg,#0D1F2D,#1a3a4a)',borderRadius:20,padding:16,color:'#fff',
+          position:'relative',overflow:'hidden',boxShadow:'0 8px 32px rgba(13,31,45,.3)'}}>
           <div style={{position:'absolute',top:-30,right:-30,width:100,height:100,borderRadius:'50%',background:'rgba(74,157,181,.1)'}}/>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',position:'relative',zIndex:1}}>
             <div>
@@ -41,7 +64,12 @@ export function SuperAdminHome({ onTab }) {
               </div>
             </div>
           </div>
-          <button onClick={()=>onTab('cycle_settings')} style={{marginTop:12,width:'100%',padding:'8px',borderRadius:10,background:'rgba(255,255,255,.1)',border:'1px solid rgba(255,255,255,.15)',color:'rgba(255,255,255,.8)',fontSize:12,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6,transition:'background .15s',position:'relative',zIndex:1}}>
+          <button onClick={()=>onTab('cycle_settings')}
+            style={{marginTop:12,width:'100%',padding:'8px',borderRadius:10,
+              background:'rgba(255,255,255,.1)',border:'1px solid rgba(255,255,255,.15)',
+              color:'rgba(255,255,255,.8)',fontSize:12,cursor:'pointer',
+              display:'flex',alignItems:'center',justifyContent:'center',gap:6,
+              transition:'background .15s',position:'relative',zIndex:1}}>
             <i className="ti ti-settings" style={{fontSize:14}}/>
             {t('تعديل بداية الدورة','Edit cycle start')}
             {settings?.updatedAt && <span style={{fontSize:10,opacity:.6,marginRight:6}}>({settings.updatedAt.toLocaleDateString('ar-OM',{day:'numeric',month:'short'})})</span>}
@@ -49,16 +77,14 @@ export function SuperAdminHome({ onTab }) {
         </div>
       )}
 
+      {/* Stats row */}
       <div className="metrics-grid">
-        <div className="metric-card">
-          <div className="metric-val">{SHARE_HOLDERS.length}</div>
-          <div className="metric-lbl">{t('إجمالي الملاك','Total shareholders')}</div>
+        <div className="metric-card" style={{cursor:'pointer'}} onClick={()=>onTab('users_manage')}>
+          <div className="metric-val">{activeUsers.length}</div>
+          <div className="metric-lbl">{t('مستخدمون نشطون','Active users')}</div>
+          <div className="metric-badge"><span className="badge badge-water">{t('مسجّل','Registered')}</span></div>
         </div>
-        <div className="metric-card">
-          <div className="metric-val">{AAD_DAYS.length}</div>
-          <div className="metric-lbl">{t('أيام الدورة','Cycle days')}</div>
-        </div>
-        <div className="metric-card">
+        <div className="metric-card" style={{cursor:'pointer'}} onClick={()=>onTab('registrations')}>
           <div className="metric-val">{pendingRegs.length}</div>
           <div className="metric-lbl">{t('طلبات معلقة','Pending requests')}</div>
           <div className="metric-badge">
@@ -68,28 +94,173 @@ export function SuperAdminHome({ onTab }) {
           </div>
         </div>
         <div className="metric-card">
-          <div className="metric-val">{info?.cycleNumber ?? '—'}</div>
-          <div className="metric-lbl">{t('رقم الدورة الحالية','Current cycle #')}</div>
-          <div className="metric-badge"><span className="badge badge-water">2024</span></div>
+          <div className="metric-val">{SHARE_HOLDERS.length}</div>
+          <div className="metric-lbl">{t('إجمالي الملاك','Total shareholders')}</div>
+        </div>
+        <div className="metric-card">
+          <div className="metric-val">{AAD_DAYS.length}</div>
+          <div className="metric-lbl">{t('أيام الدورة','Cycle days')}</div>
         </div>
       </div>
 
-      <div className="section-lbl">{t('لوحة التحكم الكاملة','Full Control Panel')}</div>
-      <div className="card">
-        <div className="card-body" style={{display:'flex',flexDirection:'column',gap:8}}>
-          {actions.map(a => (
-            <button key={a.tab} className="btn btn-outline btn-full"
-              style={{justifyContent:'flex-start',gap:10,border: a.highlight?'1.5px solid rgba(26,107,138,.3)':'',background:a.highlight?'rgba(26,107,138,.05)':''}}
-              onClick={()=>onTab(a.tab)}>
-              <div style={{width:36,height:36,borderRadius:'50%',background:`${a.color}18`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                <i className={`ti ${a.icon}`} style={{fontSize:17,color:a.color}}/>
-              </div>
-              <span style={{flex:1,textAlign:'right',fontSize:13,fontWeight:a.highlight?600:400,color:a.highlight?'var(--c-water)':'var(--c-soil)'}}>{a.label}</span>
-              {a.badge && <span className="badge badge-sun">{a.badge}</span>}
-              <i className="ti ti-chevron-left" style={{fontSize:13,color:'var(--c-stone)'}}/>
-            </button>
-          ))}
+      {/* User breakdown */}
+      {activeUsers.length > 0 && (
+        <div style={{display:'flex',gap:8,marginBottom:4}}>
+          <div style={{flex:1,borderRadius:12,padding:'10px 12px',background:'rgba(26,107,138,.07)',border:'1px solid rgba(26,107,138,.15)',textAlign:'center'}}>
+            <div style={{fontSize:18,fontWeight:700,color:'var(--c-water)'}}>{beneficiaries.length}</div>
+            <div style={{fontSize:10,color:'var(--c-stone)',marginTop:2}}>{t('مستفيدون','Beneficiaries')}</div>
+          </div>
+          <div style={{flex:1,borderRadius:12,padding:'10px 12px',background:'rgba(45,106,45,.07)',border:'1px solid rgba(45,106,45,.15)',textAlign:'center'}}>
+            <div style={{fontSize:18,fontWeight:700,color:'#2D6A2D'}}>{admins.length}</div>
+            <div style={{fontSize:10,color:'var(--c-stone)',marginTop:2}}>{t('مديرون','Admins')}</div>
+          </div>
         </div>
+      )}
+
+      {/* Grouped control panel */}
+      {groups.map(grp => (
+        <div key={grp.title}>
+          <div className="section-lbl">{grp.title}</div>
+          <div className="card">
+            <div className="card-body" style={{display:'flex',flexDirection:'column',gap:6}}>
+              {grp.items.map(a => (
+                <button key={a.tab} className="btn btn-outline btn-full"
+                  style={{justifyContent:'flex-start',gap:10,
+                    border: a.highlight?'1.5px solid rgba(26,107,138,.3)':'',
+                    background:a.highlight?'rgba(26,107,138,.05)':''}}
+                  onClick={()=>onTab(a.tab)}>
+                  <div style={{width:34,height:34,borderRadius:'50%',
+                    background:`${a.color}18`,display:'flex',alignItems:'center',
+                    justifyContent:'center',flexShrink:0}}>
+                    <i className={`ti ${a.icon}`} style={{fontSize:16,color:a.color}}/>
+                  </div>
+                  <span style={{flex:1,textAlign:'right',fontSize:13,
+                    fontWeight:a.highlight?600:400,
+                    color:a.highlight?'var(--c-water)':'var(--c-soil)'}}>
+                    {a.label}
+                  </span>
+                  {a.badge ? <span className="badge badge-sun">{a.badge}</span> : null}
+                  <i className="ti ti-chevron-left" style={{fontSize:13,color:'var(--c-stone)'}}/>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/* ═══════════ USERS MANAGE PAGE ═══════════ */
+export function UsersManagePage() {
+  const { t, lang, users, updateUserName, updateAvatar } = useApp()
+  const [editId,   setEditId]   = useState(null)
+  const [editName, setEditName] = useState('')
+  const [query,    setQuery]    = useState('')
+
+  const ROLE_META = {
+    beneficiary:{ ar:'مستفيد',      en:'Beneficiary', color:'#1A6B8A', icon:'ti-user'        },
+    admin:      { ar:'أدمن',         en:'Admin',       color:'#2D6A2D', icon:'ti-shield-half'  },
+    super_admin:{ ar:'سوبر أدمن',   en:'Super Admin', color:'#7A3055', icon:'ti-crown'        },
+  }
+
+  const filtered = users.filter(u =>
+    !query ||
+    u.fullName?.includes(query) ||
+    u.username?.includes(query)
+  )
+
+  const startEdit = (u) => { setEditId(u.id); setEditName(u.fullName) }
+  const cancelEdit = () => { setEditId(null); setEditName('') }
+  const saveEdit   = (u) => {
+    if (editName.trim() && editName.trim() !== u.fullName)
+      updateUserName(u.id, editName.trim(), u.fullName)
+    cancelEdit()
+  }
+
+  return (
+    <div className="page-content">
+      <div className="search-wrap">
+        <i className="ti ti-search" aria-hidden="true"/>
+        <input value={query} onChange={e=>setQuery(e.target.value)}
+          placeholder={t('بحث باسم أو اسم المستخدم...','Search by name or username...')}/>
+        {query && <i className="ti ti-x" style={{cursor:'pointer'}} onClick={()=>setQuery('')}/>}
+      </div>
+
+      <div className="section-lbl">{t('المستخدمون المسجّلون','Registered Users')} ({filtered.length})</div>
+      <div className="card">
+        {filtered.map(u => {
+          const rm   = ROLE_META[u.role] || ROLE_META.beneficiary
+          const isMe = u.role === 'super_admin'
+          const isEditing = editId === u.id
+          return (
+            <div key={u.id} style={{borderBottom:'1px solid rgba(44,31,14,.06)'}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,padding:'12px 14px'}}>
+                {/* Avatar */}
+                <div style={{width:42,height:42,borderRadius:'50%',flexShrink:0,overflow:'hidden',
+                  background:rm.color+'22',display:'flex',alignItems:'center',justifyContent:'center',
+                  border:`2px solid ${rm.color}30`}}>
+                  {u.avatar
+                    ? <img src={u.avatar} alt={u.fullName} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                    : <i className={`ti ${rm.icon}`} style={{fontSize:18,color:rm.color}}/>
+                  }
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:13,fontWeight:600,color:'var(--c-soil)'}}>{u.fullName}</div>
+                  <div style={{fontSize:11,color:'var(--c-stone)',marginTop:2,display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+                    <code style={{background:'rgba(44,31,14,.06)',padding:'1px 5px',borderRadius:4}}>@{u.username}</code>
+                    {u.phone && <span>{u.phone}</span>}
+                  </div>
+                </div>
+                <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4}}>
+                  <span style={{fontSize:10,fontWeight:700,padding:'3px 8px',borderRadius:8,
+                    background:rm.color+'18',color:rm.color,border:`1px solid ${rm.color}30`}}>
+                    {lang==='ar'?rm.ar:rm.en}
+                  </span>
+                  {!isMe && (
+                    <button
+                      style={{background:'none',border:'none',cursor:'pointer',
+                        padding:'3px 6px',borderRadius:6,color:'var(--c-stone)',fontSize:13}}
+                      onClick={()=> isEditing ? cancelEdit() : startEdit(u)}
+                      title={t('تعديل الاسم','Edit name')}>
+                      <i className={`ti ti-${isEditing?'x':'pencil'}`} style={{fontSize:13}}/>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Inline name edit */}
+              {isEditing && (
+                <div style={{margin:'0 14px 12px',padding:12,
+                  background:'rgba(26,107,138,.05)',borderRadius:10,
+                  border:'1px solid rgba(26,107,138,.15)'}}>
+                  <div className="form-group" style={{marginBottom:10}}>
+                    <label className="form-label" style={{fontSize:11}}>{t('الاسم الجديد','New display name')}</label>
+                    <input className="form-input" value={editName}
+                      onChange={e=>setEditName(e.target.value)}
+                      placeholder={t('أدخل الاسم...','Enter name...')}
+                      autoFocus style={{fontSize:13}}/>
+                  </div>
+                  <div className="btn-row" style={{marginTop:0}}>
+                    <button className="btn btn-primary btn-sm" style={{flex:1}} onClick={()=>saveEdit(u)}>
+                      <i className="ti ti-check"/>{t('حفظ','Save')}
+                    </button>
+                    <button className="btn btn-outline btn-sm" style={{flex:1}} onClick={cancelEdit}>
+                      {t('إلغاء','Cancel')}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
+
+        {filtered.length === 0 && (
+          <div style={{textAlign:'center',padding:'30px 20px',color:'var(--c-stone)'}}>
+            <i className="ti ti-users" style={{fontSize:36,display:'block',marginBottom:8,opacity:.3}}/>
+            <div style={{fontSize:13}}>{t('لا توجد نتائج','No results found')}</div>
+          </div>
+        )}
       </div>
     </div>
   )

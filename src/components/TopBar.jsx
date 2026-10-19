@@ -1,13 +1,23 @@
+import { useRef } from 'react'
 import { useApp } from '../hooks/useAppState'
 import { useNav } from '../hooks/useNavigation'
 
 export default function TopBar({ onNotifClick }) {
-  const { currentUser, lang, setLang, t, unreadCount } = useApp()
+  const { currentUser, lang, setLang, t, unreadCount, updateAvatar } = useApp()
   const { canGoBack, pop, current, activeTab } = useNav()
+  const fileRef = useRef(null)
   if (!currentUser) return null
 
   const name = currentUser.fullName
-  const initials = name.split(' ').slice(0,2).map(w=>w[0]).join('')
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => updateAvatar(currentUser.id, ev.target.result)
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
 
   // عنوان الصفحة الحالية
   const TAB_TITLES = {
@@ -59,7 +69,27 @@ export default function TopBar({ onNotifClick }) {
           <i className="ti ti-bell" aria-hidden="true"/>
           {unreadCount > 0 && <span className="notif-badge">{unreadCount}</span>}
         </button>
-        <div className="avatar-sm">{initials}</div>
+        {/* Avatar with upload */}
+        <label style={{position:'relative',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}
+          title={t('تغيير الصورة','Change photo')}>
+          <input ref={fileRef} type="file" accept="image/*" style={{display:'none'}} onChange={handleAvatarChange}/>
+          <div className="avatar-sm" style={{overflow:'hidden',padding:0,
+            background: currentUser.avatar ? 'transparent' : 'rgba(255,255,255,.18)',
+            border: currentUser.avatar ? '2px solid rgba(255,255,255,.4)' : '2px dashed rgba(255,255,255,.35)'}}>
+            {currentUser.avatar
+              ? <img src={currentUser.avatar} alt={name}
+                  style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'50%',display:'block'}}/>
+              : <i className="ti ti-user" style={{fontSize:17,color:'rgba(255,255,255,.85)'}}/>
+            }
+          </div>
+          <div style={{position:'absolute',bottom:-2,right:-2,
+            width:14,height:14,borderRadius:'50%',
+            background:'var(--c-water)',
+            display:'flex',alignItems:'center',justifyContent:'center',
+            border:'1.5px solid rgba(255,255,255,.9)',pointerEvents:'none'}}>
+            <i className="ti ti-camera" style={{fontSize:7,color:'#fff'}}/>
+          </div>
+        </label>
       </div>
     </div>
   )
