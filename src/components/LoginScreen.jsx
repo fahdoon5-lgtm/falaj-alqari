@@ -28,20 +28,19 @@ export default function LoginScreen() {
     return <SuccessPage registration={lastReg} onBack={() => setScreen('login')}/>
   }
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!username.trim() || !password) {
       setError(t('أدخل اسم المستخدم وكلمة المرور','Enter username and password'))
       return
     }
     setLoading(true)
-    setTimeout(() => {
-      const result = loginWithCredentials(username, password, remember)
-      setLoading(false)
-      if (!result.ok) {
-        setError(t('اسم المستخدم أو كلمة المرور غير صحيحة','Incorrect username or password'))
-        setPassword('')
-      }
-    }, 400)
+    setError('')
+    const result = await loginWithCredentials(username, password, remember)
+    setLoading(false)
+    if (!result?.ok) {
+      setError(t('اسم المستخدم أو كلمة المرور غير صحيحة','Incorrect username or password'))
+      setPassword('')
+    }
   }
 
   return (

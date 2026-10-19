@@ -226,13 +226,13 @@ export function AppProvider({ children }) {
     setCurrentUser(user)
     _recordLogin(user)
 
-    if (remember) {
-      const { data: sess } = await supabase
-        .from('sessions').insert({ user_id: user.id }).select().single()
-      if (sess) localStorage.setItem(SESSION_TOKEN_KEY, sess.token)
-    } else {
-      localStorage.removeItem(SESSION_TOKEN_KEY)
-    }
+    // Always save session; "remember" controls duration (30d vs 1d)
+    const expiresAt = remember
+      ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      : new Date(Date.now() +      24 * 60 * 60 * 1000).toISOString()
+    const { data: sess } = await supabase
+      .from('sessions').insert({ user_id: user.id, expires_at: expiresAt }).select().single()
+    if (sess) localStorage.setItem(SESSION_TOKEN_KEY, sess.token)
 
     await _loadNotifs(user.id)
     return { ok: true }
