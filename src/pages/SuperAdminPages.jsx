@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useApp } from '../hooks/useAppState'
 import { useCycle } from '../hooks/useCycleSettings'
 import { AAD_DAYS, SHARE_HOLDERS } from '../data/falajData'
@@ -151,35 +151,296 @@ export function SuperAdminHome({ onTab }) {
   )
 }
 
-/* ═══════════ USERS MANAGE PAGE ═══════════ */
-export function UsersManagePage() {
-  const { t, lang, users, updateUserName, updateAvatar } = useApp()
-  const [editId,   setEditId]   = useState(null)
-  const [editName, setEditName] = useState('')
-  const [query,    setQuery]    = useState('')
+/* ═══════════ AVATAR CROPPER ═══════════ */
+function AvatarCropper({ src, onSave, onCancel }) {
+  const SIZE = 240
+  const { t } = useApp()
+  const [pos,     setPos]     = useState({ x: 0, y: 0 })
+  const [zoom,    setZoom]    = useState(1)
+  const [imgSize, setImgSize] = useState(null)
+  const [dragging,setDragging]= useState(false)
+  const [lastP,   setLastP]   = useState(null)
+  const imgRef = useRef(null)
 
-  const ROLE_META = {
-    beneficiary:{ ar:'مستفيد',      en:'Beneficiary', color:'#1A6B8A', icon:'ti-user'        },
-    admin:      { ar:'أدمن',         en:'Admin',       color:'#2D6A2D', icon:'ti-shield-half'  },
-    super_admin:{ ar:'سوبر أدمن',   en:'Super Admin', color:'#7A3055', icon:'ti-crown'        },
+  const baseScale   = imgSize ? Math.max(SIZE / imgSize.w, SIZE / imgSize.h) : 1
+  const displayScale= baseScale * zoom
+  const displayW    = imgSize ? imgSize.w * displayScale : SIZE
+  const displayH    = imgSize ? imgSize.h * displayScale : SIZE
+
+  const onDown = (cx, cy) => { setDragging(true); setLastP({ x: cx, y: cy }) }
+  const onMove = (cx, cy) => {
+    if (!dragging || !lastP) return
+    setPos(prev => ({ x: prev.x + cx - lastP.x, y: prev.y + cy - lastP.y }))
+    setLastP({ x: cx, y: cy })
   }
+  const onUp = () => { setDragging(false); setLastP(null) }
 
-  const filtered = users.filter(u =>
-    !query ||
-    u.fullName?.includes(query) ||
-    u.username?.includes(query)
-  )
-
-  const startEdit = (u) => { setEditId(u.id); setEditName(u.fullName) }
-  const cancelEdit = () => { setEditId(null); setEditName('') }
-  const saveEdit   = (u) => {
-    if (editName.trim() && editName.trim() !== u.fullName)
-      updateUserName(u.id, editName.trim(), u.fullName)
-    cancelEdit()
+  const saveCrop = () => {
+    const img = imgRef.current
+    if (!img || !imgSize) return
+    const OUT = 200
+    const cx  = SIZE / 2 - displayW / 2 + pos.x
+    const cy  = SIZE / 2 - displayH / 2 + pos.y
+    const srcX = -cx / displayScale
+    const srcY = -cy / displayScale
+    const srcW = SIZE / displayScale
+    const srcH = SIZE / displayScale
+    const canvas = document.createElement('canvas')
+    canvas.width = OUT; canvas.height = OUT
+    const ctx = canvas.getContext('2d')
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(OUT / 2, OUT / 2, OUT / 2, 0, Math.PI * 2)
+    ctx.clip()
+    ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, OUT, OUT)
+    ctx.restore()
+    onSave(canvas.toDataURL('image/jpeg', 0.88))
   }
 
   return (
+    <div style={{position:'fixed',inset:0,zIndex:300,
+      background:'rgba(0,0,0,.88)',backdropFilter:'blur(4px)',
+      display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}}>
+
+      <div style={{color:'#fff',fontSize:14,fontWeight:700,marginBottom:6}}>
+        {t('حرّك الصورة وضبّط الحجم','Move & crop your photo')}
+      </div>
+      <div style={{color:'rgba(255,255,255,.5)',fontSize:11,marginBottom:20}}>
+        {t('اسحب لتعديل الموضع · المزلقة للتكبير','Drag to reposition · slider to zoom')}
+      </div>
+
+      {/* Circle viewport */}
+      <div style={{
+        width:SIZE, height:SIZE, borderRadius:'50%', overflow:'hidden',
+        cursor: dragging ? 'grabbing' : 'grab',
+        border:'3px solid rgba(255,255,255,.55)',
+        position:'relative', background:'#222', userSelect:'none',
+        boxShadow:'0 0 0 9999px rgba(0,0,0,.5)',
+        touchAction:'none',
+      }}
+        onMouseDown={e => onDown(e.clientX, e.clientY)}
+        onMouseMove={e => onMove(e.clientX, e.clientY)}
+        onMouseUp={onUp} onMouseLeave={onUp}
+        onTouchStart={e => { e.preventDefault(); onDown(e.touches[0].clientX, e.touches[0].clientY) }}
+        onTouchMove={e  => { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY) }}
+        onTouchEnd={onUp}>
+        <img ref={imgRef} src={src} draggable={false}
+          onLoad={e => {
+            setImgSize({ w: e.target.naturalWidth, h: e.target.naturalHeight })
+            setPos({ x: 0, y: 0 })
+          }}
+          style={{
+            position:'absolute',
+            width: displayW, height: displayH,
+            left: SIZE / 2 - displayW / 2 + pos.x,
+            top:  SIZE / 2 - displayH / 2 + pos.y,
+            pointerEvents:'none', userSelect:'none',
+          }}/>
+      </div>
+
+      {/* Zoom slider */}
+      <div style={{width:SIZE,marginTop:18,display:'flex',alignItems:'center',gap:10}}>
+        <i className="ti ti-zoom-out" style={{color:'rgba(255,255,255,.5)',fontSize:16,flexShrink:0}}/>
+        <input type="range" min="1" max="3" step="0.04" value={zoom}
+          onChange={e => setZoom(Number(e.target.value))}
+          style={{flex:1, accentColor:'var(--c-water)', height:4}}/>
+        <i className="ti ti-zoom-in" style={{color:'rgba(255,255,255,.5)',fontSize:16,flexShrink:0}}/>
+      </div>
+
+      {/* Buttons */}
+      <div style={{display:'flex',gap:10,marginTop:22,width:SIZE}}>
+        <button onClick={saveCrop} disabled={!imgSize}
+          style={{flex:1,padding:'12px 0',borderRadius:12,border:'none',
+            background:'var(--c-water)',color:'#fff',fontWeight:700,
+            fontSize:13,cursor:'pointer',opacity:imgSize?1:.5}}>
+          <i className="ti ti-crop" style={{marginInlineEnd:6}}/>{t('قص وحفظ','Crop & Save')}
+        </button>
+        <button onClick={onCancel}
+          style={{flex:1,padding:'12px 0',borderRadius:12,
+            border:'1.5px solid rgba(255,255,255,.22)',background:'transparent',
+            color:'rgba(255,255,255,.8)',fontSize:13,cursor:'pointer'}}>
+          {t('إلغاء','Cancel')}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════ PROFILE EDIT SHEET ═══════════ */
+function ProfileEditSheet({ user, rm, onClose }) {
+  const { t, updateUserName, updateAvatar, updatePhone } = useApp()
+  const [name,     setName]     = useState(user.fullName || '')
+  const [phone,    setPhone]    = useState(user.phone    || '')
+  const [avatarUrl,setAvatarUrl]= useState(user.avatar   || null)
+  const [cropSrc,  setCropSrc]  = useState(null)
+  const fileRef = useRef(null)
+
+  const handleFile = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = ev => setCropSrc(ev.target.result)
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  const save = () => {
+    if (name.trim() && name.trim() !== user.fullName)
+      updateUserName(user.id, name.trim(), user.fullName)
+    if (phone.trim() !== (user.phone || ''))
+      updatePhone(user.id, phone.trim())
+    if (avatarUrl !== user.avatar)
+      updateAvatar(user.id, avatarUrl)
+    onClose()
+  }
+
+  return (
+    <>
+      {cropSrc && (
+        <AvatarCropper
+          src={cropSrc}
+          onSave={url => { setAvatarUrl(url); setCropSrc(null) }}
+          onCancel={() => setCropSrc(null)}/>
+      )}
+
+      {/* Backdrop */}
+      <div style={{position:'fixed',inset:0,zIndex:100,
+        background:'rgba(0,0,0,.4)',backdropFilter:'blur(2px)'}}
+        onClick={onClose}/>
+
+      {/* Sheet */}
+      <div style={{
+        position:'fixed',left:0,right:0,bottom:0,zIndex:101,
+        background:'#fff',borderRadius:'20px 20px 0 0',
+        padding:'16px 20px 36px',
+        boxShadow:'0 -8px 40px rgba(0,0,0,.18)',
+        maxHeight:'88vh',overflowY:'auto',
+      }}>
+        {/* Drag handle */}
+        <div style={{width:40,height:4,borderRadius:2,background:'rgba(44,31,14,.14)',margin:'0 auto 18px'}}/>
+
+        <div style={{fontSize:14,fontWeight:700,color:'var(--c-soil)',marginBottom:20}}>
+          {t('تعديل البروفايل','Edit Profile')}
+        </div>
+
+        {/* Avatar row */}
+        <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:22,
+          padding:'14px',background:'rgba(44,31,14,.03)',borderRadius:14,
+          border:'1px solid rgba(44,31,14,.07)'}}>
+          <div style={{position:'relative',cursor:'pointer',flexShrink:0}}
+            onClick={() => fileRef.current?.click()}>
+            <div style={{width:72,height:72,borderRadius:'50%',overflow:'hidden',
+              background:rm.color+'22',display:'flex',alignItems:'center',justifyContent:'center',
+              border:`3px solid ${rm.color}35`}}>
+              {avatarUrl
+                ? <img src={avatarUrl} alt={user.fullName} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                : <i className={`ti ${rm.icon}`} style={{fontSize:28,color:rm.color}}/>
+              }
+            </div>
+            <div style={{position:'absolute',bottom:1,right:1,
+              width:22,height:22,borderRadius:'50%',
+              background:'var(--c-water)',border:'2px solid #fff',
+              display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <i className="ti ti-camera" style={{fontSize:10,color:'#fff'}}/>
+            </div>
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12,fontWeight:600,color:'var(--c-soil)',marginBottom:6}}>
+              {t('الصورة الشخصية','Profile photo')}
+            </div>
+            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+              <button onClick={() => fileRef.current?.click()}
+                style={{fontSize:11,padding:'5px 12px',borderRadius:8,cursor:'pointer',
+                  background:'var(--c-water)',color:'#fff',border:'none',fontWeight:600}}>
+                <i className="ti ti-upload" style={{fontSize:11,marginInlineEnd:4}}/>
+                {t('رفع صورة','Upload')}
+              </button>
+              {avatarUrl && (
+                <button onClick={() => setAvatarUrl(null)}
+                  style={{fontSize:11,padding:'5px 12px',borderRadius:8,cursor:'pointer',
+                    background:'rgba(192,57,43,.08)',color:'#C0392B',
+                    border:'1px solid rgba(192,57,43,.2)'}}>
+                  {t('حذف الصورة','Remove')}
+                </button>
+              )}
+            </div>
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" style={{display:'none'}} onChange={handleFile}/>
+        </div>
+
+        {/* Name */}
+        <div className="form-group">
+          <label className="form-label">{t('الاسم الكامل','Full Name')}</label>
+          <input className="form-input" value={name} onChange={e=>setName(e.target.value)}
+            placeholder={t('الاسم الكامل','Full name')}/>
+        </div>
+
+        {/* Phone */}
+        <div className="form-group">
+          <label className="form-label">{t('رقم الهاتف','Phone Number')}</label>
+          <div style={{position:'relative'}}>
+            <i className="ti ti-phone" style={{
+              position:'absolute',top:'50%',transform:'translateY(-50%)',
+              right:12,fontSize:15,color:'var(--c-stone)',pointerEvents:'none'}}/>
+            <input className="form-input"
+              value={phone} onChange={e=>setPhone(e.target.value)}
+              type="tel" inputMode="tel"
+              placeholder="+968 9XXX XXXX"
+              style={{paddingRight:38,direction:'ltr',textAlign:'right'}}/>
+          </div>
+        </div>
+
+        {/* Info row */}
+        <div style={{display:'flex',gap:8,marginBottom:16,padding:'10px 12px',
+          background:'rgba(44,31,14,.04)',borderRadius:10,
+          border:'1px solid rgba(44,31,14,.07)'}}>
+          <code style={{fontSize:11,color:'var(--c-stone)',background:'rgba(44,31,14,.06)',
+            padding:'2px 6px',borderRadius:4}}>@{user.username}</code>
+          <span style={{fontSize:11,padding:'2px 8px',borderRadius:8,fontWeight:700,
+            background:rm.color+'18',color:rm.color}}>
+            {rm.ar}
+          </span>
+        </div>
+
+        {/* Buttons */}
+        <div className="btn-row">
+          <button className="btn btn-primary" style={{flex:1}} onClick={save}>
+            <i className="ti ti-check"/>{t('حفظ التغييرات','Save Changes')}
+          </button>
+          <button className="btn btn-outline" style={{flex:1}} onClick={onClose}>
+            {t('إلغاء','Cancel')}
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+/* ═══════════ USERS MANAGE PAGE ═══════════ */
+export function UsersManagePage() {
+  const { t, lang, users } = useApp()
+  const [editUser, setEditUser] = useState(null)
+  const [query,    setQuery]    = useState('')
+
+  const ROLE_META = {
+    beneficiary:{ ar:'مستفيد',    en:'Beneficiary', color:'#1A6B8A', icon:'ti-user'       },
+    admin:      { ar:'أدمن',       en:'Admin',       color:'#2D6A2D', icon:'ti-shield-half' },
+    super_admin:{ ar:'سوبر أدمن', en:'Super Admin', color:'#7A3055', icon:'ti-crown'       },
+  }
+
+  const filtered = users.filter(u =>
+    !query || u.fullName?.includes(query) || u.username?.includes(query)
+  )
+
+  return (
     <div className="page-content">
+      {editUser && (
+        <ProfileEditSheet
+          user={editUser}
+          rm={ROLE_META[editUser.role] || ROLE_META.beneficiary}
+          onClose={() => setEditUser(null)}/>
+      )}
+
       <div className="search-wrap">
         <i className="ti ti-search" aria-hidden="true"/>
         <input value={query} onChange={e=>setQuery(e.target.value)}
@@ -190,71 +451,44 @@ export function UsersManagePage() {
       <div className="section-lbl">{t('المستخدمون المسجّلون','Registered Users')} ({filtered.length})</div>
       <div className="card">
         {filtered.map(u => {
-          const rm   = ROLE_META[u.role] || ROLE_META.beneficiary
-          const isEditing = editId === u.id
+          const rm = ROLE_META[u.role] || ROLE_META.beneficiary
           return (
-            <div key={u.id} style={{borderBottom:'1px solid rgba(44,31,14,.06)'}}>
+            <div key={u.id}
+              onClick={() => setEditUser(u)}
+              style={{borderBottom:'1px solid rgba(44,31,14,.06)',cursor:'pointer',transition:'background .12s'}}
+              onMouseEnter={e=>e.currentTarget.style.background='rgba(26,107,138,.04)'}
+              onMouseLeave={e=>e.currentTarget.style.background=''}>
               <div style={{display:'flex',alignItems:'center',gap:10,padding:'12px 14px'}}>
                 {/* Avatar */}
-                <div style={{width:42,height:42,borderRadius:'50%',flexShrink:0,overflow:'hidden',
+                <div style={{width:44,height:44,borderRadius:'50%',flexShrink:0,overflow:'hidden',
                   background:rm.color+'22',display:'flex',alignItems:'center',justifyContent:'center',
-                  border:`2px solid ${rm.color}30`}}>
+                  border:`2px solid ${rm.color}35`}}>
                   {u.avatar
                     ? <img src={u.avatar} alt={u.fullName} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-                    : <i className={`ti ${rm.icon}`} style={{fontSize:18,color:rm.color}}/>
+                    : <i className={`ti ${rm.icon}`} style={{fontSize:19,color:rm.color}}/>
                   }
                 </div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:13,fontWeight:600,color:'var(--c-soil)'}}>{u.fullName}</div>
-                  <div style={{fontSize:11,color:'var(--c-stone)',marginTop:2,display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+                  <div style={{fontSize:11,color:'var(--c-stone)',marginTop:2,display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
                     <code style={{background:'rgba(44,31,14,.06)',padding:'1px 5px',borderRadius:4}}>@{u.username}</code>
                     {u.phone && <span>{u.phone}</span>}
                   </div>
                 </div>
-                <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4}}>
+                <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6}}>
                   <span style={{fontSize:10,fontWeight:700,padding:'3px 8px',borderRadius:8,
-                    background:rm.color+'18',color:rm.color,border:`1px solid ${rm.color}30`}}>
+                    background:rm.color+'18',color:rm.color,border:`1px solid ${rm.color}28`}}>
                     {lang==='ar'?rm.ar:rm.en}
                   </span>
-                  <button
-                    style={{background:'none',border:'none',cursor:'pointer',
-                      padding:'3px 6px',borderRadius:6,color:'var(--c-stone)',fontSize:13}}
-                    onClick={()=> isEditing ? cancelEdit() : startEdit(u)}
-                    title={t('تعديل الاسم','Edit name')}>
-                    <i className={`ti ti-${isEditing?'x':'pencil'}`} style={{fontSize:13}}/>
-                  </button>
+                  <i className="ti ti-chevron-left" style={{fontSize:13,color:'rgba(44,31,14,.25)'}}/>
                 </div>
               </div>
-
-              {/* Inline name edit */}
-              {isEditing && (
-                <div style={{margin:'0 14px 12px',padding:12,
-                  background:'rgba(26,107,138,.05)',borderRadius:10,
-                  border:'1px solid rgba(26,107,138,.15)'}}>
-                  <div className="form-group" style={{marginBottom:10}}>
-                    <label className="form-label" style={{fontSize:11}}>{t('الاسم الجديد','New display name')}</label>
-                    <input className="form-input" value={editName}
-                      onChange={e=>setEditName(e.target.value)}
-                      placeholder={t('أدخل الاسم...','Enter name...')}
-                      autoFocus style={{fontSize:13}}/>
-                  </div>
-                  <div className="btn-row" style={{marginTop:0}}>
-                    <button className="btn btn-primary btn-sm" style={{flex:1}} onClick={()=>saveEdit(u)}>
-                      <i className="ti ti-check"/>{t('حفظ','Save')}
-                    </button>
-                    <button className="btn btn-outline btn-sm" style={{flex:1}} onClick={cancelEdit}>
-                      {t('إلغاء','Cancel')}
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           )
         })}
-
         {filtered.length === 0 && (
-          <div style={{textAlign:'center',padding:'30px 20px',color:'var(--c-stone)'}}>
-            <i className="ti ti-users" style={{fontSize:36,display:'block',marginBottom:8,opacity:.3}}/>
+          <div style={{textAlign:'center',padding:'32px 20px',color:'var(--c-stone)'}}>
+            <i className="ti ti-users" style={{fontSize:36,display:'block',marginBottom:8,opacity:.25}}/>
             <div style={{fontSize:13}}>{t('لا توجد نتائج','No results found')}</div>
           </div>
         )}
@@ -264,24 +498,47 @@ export function UsersManagePage() {
 }
 
 export function BroadcastPage() {
-  const { t } = useApp()
-  const [msg, setMsg] = useState('')
+  const { t, broadcastNotif } = useApp()
+  const [msg,  setMsg]  = useState('')
   const [sent, setSent] = useState(false)
+
+  const handleSend = () => {
+    if (!msg.trim()) return
+    broadcastNotif(msg.trim())
+    setSent(true)
+    setMsg('')
+    setTimeout(() => setSent(false), 3500)
+  }
+
   return (
     <div className="page-content">
       <div className="card">
-        <div className="card-head"><span className="card-title">{t('إشعار جماعي','Broadcast Notification')}</span></div>
+        <div className="card-head">
+          <span className="card-title">{t('إشعار جماعي','Broadcast Notification')}</span>
+        </div>
         <div className="card-body">
-          <div className="warn-box" style={{marginBottom:12}}>
-            <i className="ti ti-alert-triangle" style={{fontSize:15,flexShrink:0}}/>
-            <span style={{fontSize:12}}>{t('سيصل هذا الإشعار لجميع المستفيدين المسجلين.','This notification reaches all registered beneficiaries.')}</span>
+          <div className="info-box" style={{marginBottom:12}}>
+            <i className="ti ti-speakerphone" style={{fontSize:15,flexShrink:0,color:'var(--c-water)'}}/>
+            <span style={{fontSize:12}}>{t('سيظهر الإشعار فوراً في جرس التنبيهات لجميع المستخدمين.','Notification appears instantly in every user\'s bell.')}</span>
           </div>
           <div className="form-group">
             <label className="form-label">{t('نص الإشعار','Notification Text')}</label>
-            <textarea className="form-textarea" rows={4} value={msg} onChange={e=>setMsg(e.target.value)}
+            <textarea className="form-textarea" rows={4} value={msg} onChange={e=>{setMsg(e.target.value);setSent(false)}}
               placeholder={t('اكتب الرسالة هنا...','Write message here...')} style={{width:'100%'}}/>
+            <div style={{fontSize:10,color:'var(--c-stone)',marginTop:4,textAlign:'left'}}>
+              {msg.length} {t('حرف','chars')}
+            </div>
           </div>
-          <button className="btn btn-soil btn-full" disabled={!msg.trim()} onClick={()=>{setSent(true);setMsg('')}}>
+          {sent && (
+            <div style={{display:'flex',alignItems:'center',gap:8,padding:'10px 12px',borderRadius:10,
+              background:'rgba(45,106,45,.07)',border:'1px solid rgba(45,106,45,.2)',
+              color:'#2D6A2D',fontSize:12,marginBottom:12}}>
+              <i className="ti ti-circle-check" style={{fontSize:16}}/>
+              {t('تم الإرسال! يمكنك التحقق من سجل التدقيق.','Sent! Check the audit log to confirm.')}
+            </div>
+          )}
+          <button className="btn btn-soil btn-full" disabled={!msg.trim() || sent} onClick={handleSend}
+            style={{opacity: sent ? .6 : 1}}>
             <i className={`ti ti-${sent?'check':'send'}`}/>
             {sent ? t('تم الإرسال ✓','Sent ✓') : t('إرسال للجميع','Send to All')}
           </button>

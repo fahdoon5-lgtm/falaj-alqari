@@ -7,6 +7,7 @@ export default function NotificationsPanel({ onClose }) {
     turn_reminder:  'ti-bell',
     split_approved: 'ti-git-branch',
     system:         'ti-info-circle',
+    broadcast:      'ti-speakerphone',
   }
 
   return (

@@ -156,6 +156,32 @@ export function AppProvider({ children }) {
     })
   }
 
+  // ─── Edit phone number ────────────────────────────────────────────────────
+  const updatePhone = (userId, newPhone) => {
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, phone: newPhone } : u))
+    if (currentUser?.id === userId)
+      setCurrentUser(prev => prev ? { ...prev, phone: newPhone } : prev)
+  }
+
+  // ─── Broadcast notification to all users ──────────────────────────────────
+  const broadcastNotif = (message) => {
+    const at = new Date().toLocaleString('ar-OM')
+    const notif = {
+      id: `notif_${Date.now()}`,
+      titleAr: t('إشعار من الإدارة', 'Admin Notification'),
+      body: message,
+      isRead: false,
+      type: 'broadcast',
+      createdAt: new Date().toISOString(),
+    }
+    setNotifications(prev => [notif, ...prev])
+    logAudit({
+      actor: currentUser?.fullName || '—',
+      action: 'إرسال إشعار جماعي',
+      entity: message.length > 40 ? message.slice(0, 40) + '…' : message,
+    })
+  }
+
   // ─── Name-change: direct edit by admin ────────────────────────────────────
   const directEditName = ({ holderId, currentName, newName, reason, note }) => {
     setHolderNames(prev => ({ ...prev, [holderId]: newName }))
@@ -217,7 +243,8 @@ export function AppProvider({ children }) {
     <AppCtx.Provider value={{
       currentUser, login, loginWithCredentials, logout,
       users, loginLogs,
-      updateAvatar, updateUserName,
+      updateAvatar, updateUserName, updatePhone,
+      broadcastNotif,
       lang, setLang, t,
       pendingRegs, approveReg, rejectReg,
       notifications, markNotifRead, unreadCount,
