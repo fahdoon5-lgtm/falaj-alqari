@@ -51,7 +51,7 @@ export default function TopBar({ onNotifClick }) {
 
   const pageTitle = current?.title
     || TAB_TITLES[activeTab]?.[lang]
-    || (lang==='ar' ? 'فلج القري' : 'Falaj Al-Qari')
+    || (lang==='ar' ? 'فلج القاري' : 'Falaj Al-Qari')
 
   return (
     <div className="topbar" style={{transition:'all .25s'}}>
@@ -66,7 +66,7 @@ export default function TopBar({ onNotifClick }) {
         )}
         <div>
           <div className="topbar-title" style={{fontSize: canGoBack ? 14 : 15}}>
-            {canGoBack ? pageTitle : t('فلج القري','Falaj Al-Qari')}
+            {canGoBack ? pageTitle : t('فلج القاري','Falaj Al-Qari')}
           </div>
           {!canGoBack && (
             <div className="topbar-sub">{name}</div>

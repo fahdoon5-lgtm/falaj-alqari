@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo, memo } from 'react'
+import { useState, useEffect, useMemo, memo, useRef, useCallback } from 'react'
 import { useApp } from '../hooks/useAppState'
 import { useCycle } from '../hooks/useCycleSettings'
 import { AAD_DAYS, SHARES } from '../data/falajData'
-import { getHolder, formatAtharDuration, initials, openWhatsApp, buildReminderMessage } from '../utils/helpers'
+import { getHolder, formatAtharDuration, initials, openWhatsApp, buildReminderMessage, getAvatar, saveAvatar, removeAvatar } from '../utils/helpers'
 import { getCurrentAadInfo, getMyTurns, formatCountdown, formatDate } from '../utils/cycleEngine'
 
 const TRIBE_COLORS = {
@@ -17,21 +17,108 @@ const TRIBE_COLORS = {
 
 const ProfileCard = memo(function ProfileCard({ user }) {
   const { t } = useApp()
-  const holder = getHolder(user.holderId)
-  const ini    = initials(user.fullName)
-  const tribe  = holder.tribe || 'default'
-  const bg     = TRIBE_COLORS[tribe] || TRIBE_COLORS.default
-  const myDays = AAD_DAYS.filter(d =>
+  const holder  = getHolder(user.holderId)
+  const ini     = initials(user.fullName)
+  const tribe   = holder.tribe || 'default'
+  const bg      = TRIBE_COLORS[tribe] || TRIBE_COLORS.default
+  const myDays  = AAD_DAYS.filter(d =>
     (SHARES[d.id]||[]).some(s=>s.holderId===user.holderId)
   )
+  const fileRef = useRef(null)
+  const [avatarUrl, setAvatarUrl] = useState(() => getAvatar(user.holderId))
+  const [menuOpen, setMenuOpen]   = useState(false)
+
+  const onFileChange = useCallback((e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const dataUrl = ev.target.result
+      saveAvatar(user.holderId, dataUrl)
+      setAvatarUrl(dataUrl)
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+    setMenuOpen(false)
+  }, [user.holderId])
+
+  const handleRemove = () => {
+    removeAvatar(user.holderId)
+    setAvatarUrl(null)
+    setMenuOpen(false)
+  }
+
   return (
     <div style={{background:'linear-gradient(135deg,#0D1F2D,#1a3a4a,#0a2a1a)',borderRadius:20,padding:18,color:'#fff',position:'relative',overflow:'hidden',boxShadow:'0 8px 32px rgba(13,31,45,.25)'}}>
       <div style={{position:'absolute',top:-30,right:-30,width:100,height:100,borderRadius:'50%',background:'rgba(74,157,181,.08)',pointerEvents:'none'}}/>
       <div style={{position:'absolute',bottom:-20,left:20,width:70,height:70,borderRadius:'50%',background:'rgba(45,106,45,.08)',pointerEvents:'none'}}/>
       <div style={{display:'flex',alignItems:'center',gap:14,position:'relative',zIndex:1}}>
-        <div style={{width:58,height:58,borderRadius:'50%',background:bg,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,fontWeight:700,border:'3px solid rgba(255,255,255,.25)',boxShadow:'0 4px 16px rgba(0,0,0,.2)',flexShrink:0}}>
-          {ini}
+
+        {/* Avatar — قابل للنقر لتغيير الصورة */}
+        <div style={{position:'relative',flexShrink:0}}>
+          <div
+            onClick={() => setMenuOpen(v => !v)}
+            style={{
+              width:58, height:58, borderRadius:'50%',
+              background: avatarUrl ? 'transparent' : bg,
+              color:'#fff', display:'flex', alignItems:'center', justifyContent:'center',
+              fontSize:20, fontWeight:700,
+              border:'3px solid rgba(255,255,255,.25)',
+              boxShadow:'0 4px 16px rgba(0,0,0,.2)',
+              cursor:'pointer', overflow:'hidden', position:'relative',
+            }}
+          >
+            {avatarUrl
+              ? <img src={avatarUrl} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+              : ini
+            }
+            {/* طبقة كاميرا عند المرور */}
+            <div style={{
+              position:'absolute', inset:0, borderRadius:'50%',
+              background:'rgba(0,0,0,.45)',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              opacity: menuOpen ? 1 : 0,
+              transition:'opacity .15s',
+            }}>
+              <i className="ti ti-camera" style={{fontSize:18}}/>
+            </div>
+          </div>
+
+          {/* قائمة الخيارات */}
+          {menuOpen && (
+            <div style={{
+              position:'absolute', top:66, right:0,
+              background:'#fff', borderRadius:12, boxShadow:'0 8px 24px rgba(0,0,0,.18)',
+              overflow:'hidden', zIndex:50, minWidth:160,
+            }}>
+              <button
+                onClick={() => fileRef.current?.click()}
+                style={{display:'flex',alignItems:'center',gap:8,width:'100%',padding:'10px 14px',border:'none',background:'none',cursor:'pointer',fontSize:12,color:'#1a3a4a',fontFamily:'inherit'}}
+              >
+                <i className="ti ti-upload" style={{fontSize:15,color:'var(--c-water)'}}/>
+                {t('رفع صورة','Upload photo')}
+              </button>
+              {avatarUrl && (
+                <button
+                  onClick={handleRemove}
+                  style={{display:'flex',alignItems:'center',gap:8,width:'100%',padding:'10px 14px',border:'none',borderTop:'1px solid rgba(44,31,14,.07)',background:'none',cursor:'pointer',fontSize:12,color:'#c0392b',fontFamily:'inherit'}}
+                >
+                  <i className="ti ti-trash" style={{fontSize:15}}/>
+                  {t('حذف الصورة','Remove photo')}
+                </button>
+              )}
+              <button
+                onClick={() => setMenuOpen(false)}
+                style={{display:'flex',alignItems:'center',gap:8,width:'100%',padding:'10px 14px',border:'none',borderTop:'1px solid rgba(44,31,14,.07)',background:'none',cursor:'pointer',fontSize:12,color:'var(--c-stone)',fontFamily:'inherit'}}
+              >
+                <i className="ti ti-x" style={{fontSize:15}}/>
+                {t('إلغاء','Cancel')}
+              </button>
+            </div>
+          )}
+          <input ref={fileRef} type="file" accept="image/*" style={{display:'none'}} onChange={onFileChange}/>
         </div>
+
         <div style={{flex:1}}>
           <div style={{fontSize:15,fontWeight:700}}>{user.fullName}</div>
           <div style={{fontSize:11,color:'rgba(255,255,255,.55)',marginTop:2}}>

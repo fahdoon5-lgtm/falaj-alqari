@@ -301,5 +301,5 @@ export const PENDING_REGISTRATIONS = [
 export const NOTIFICATIONS_MOCK = [
   { id:'n01', type:'turn_reminder', titleAr:'دورك غداً في آد محمد', body:'09:30 – 11:30 | 8 آثار', isRead:false, createdAt:'2024-09-02T18:00:00' },
   { id:'n02', type:'split_approved', titleAr:'تمت الموافقة على طلب التقسيم', body:'تقسيم حصة آد الخيلانين', isRead:false, createdAt:'2024-09-01T14:00:00' },
-  { id:'n03', type:'system', titleAr:'مرحباً بك في فلج القري', body:'تم اعتماد حسابك من الأدمن', isRead:true, createdAt:'2024-08-28T09:00:00' },
+  { id:'n03', type:'system', titleAr:'مرحباً بك في فلج القاري', body:'تم اعتماد حسابك من الأدمن', isRead:true, createdAt:'2024-08-28T09:00:00' },
 ]

@@ -135,7 +135,7 @@ export default function TransparencyPage() {
       <div className="card">
         <div className="card-head">
           <div>
-            <div className="card-title">{t('حصص فلج القري — الدورة الكاملة','Falaj Al-Qari Shares — Full Cycle')}</div>
+            <div className="card-title">{t('حصص فلج القاري — الدورة الكاملة','Falaj Al-Qari Shares — Full Cycle')}</div>
             <div style={{fontSize:11, color:'var(--c-stone)', marginTop:2}}>
               {t('اختر يوم الآد لعرض توزيعه','Select an Aad day to view its distribution')}
             </div>

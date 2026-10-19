@@ -128,7 +128,7 @@ export default function RegisterPage({ onBack, onSuccess }) {
         <div style={{width:60,height:60,borderRadius:'50%',background:'linear-gradient(135deg,#1A6B8A,#4A9DB5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:26,color:'#fff',margin:'0 auto 12px',boxShadow:'0 8px 32px rgba(26,107,138,.4)'}}>
           <i className="ti ti-droplet"/>
         </div>
-        <div style={{fontSize:20,fontWeight:700,color:'#fff'}}>{t('التسجيل في فلج القري','Register — Falaj Al-Qari')}</div>
+        <div style={{fontSize:20,fontWeight:700,color:'#fff'}}>{t('التسجيل في فلج القاري','Register — Falaj Al-Qari')}</div>
         <div style={{fontSize:12,color:'rgba(255,255,255,.45)',marginTop:4}}>{t('سيتم مراجعة طلبك من الأدمن','Your request will be reviewed by admin')}</div>
       </div>
 

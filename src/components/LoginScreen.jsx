@@ -87,7 +87,7 @@ export default function LoginScreen() {
                 {t('أثر','Athar')}
               </div>
               <div style={{fontSize:12,color:'rgba(255,255,255,.65)',fontWeight:500,marginTop:2}}>
-                {t('فلج القري','Falaj Al-Qari')}
+                {t('فلج القاري','Falaj Al-Qari')}
               </div>
             </div>
           </div>
@@ -220,7 +220,7 @@ export default function LoginScreen() {
         </button>
 
         <div style={{marginTop:14,fontSize:11,color:'var(--c-stone)',textAlign:'center',lineHeight:1.8}}>
-          {t('نظام تجريبي · البيانات من فلج القري الحقيقي','Demo system · data from the real Falaj Al-Qari')}
+          {t('نظام تجريبي · البيانات من فلج القاري الحقيقي','Demo system · data from the real Falaj Al-Qari')}
           <br/>
           <span style={{color:'var(--c-water)',fontWeight:600}}>
             {t('سيجاء · سمائل · عُمان','Sayjah · Samail · Oman')}

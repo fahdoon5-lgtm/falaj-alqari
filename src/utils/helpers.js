@@ -51,6 +51,27 @@ export function buildReminderMessage(holderName, aadName, startTime, endTime, at
   return `As-salamu alaykum,\nFalaj reminder:\n📅 ${aadName}\n⏰ ${startTime} – ${endTime}\n💧 ${athars} athars\nPlease prepare. Thank you.`
 }
 
+// ══ Avatar storage (localStorage, base64) ══
+const AVATAR_KEY = (holderId) => `falaj_avatar_${holderId}`
+
+export function getAvatar(holderId) {
+  if (!holderId) return null
+  try { return localStorage.getItem(AVATAR_KEY(holderId)) || null }
+  catch { return null }
+}
+
+export function saveAvatar(holderId, dataUrl) {
+  if (!holderId) return
+  try { localStorage.setItem(AVATAR_KEY(holderId), dataUrl) }
+  catch { /* quota exceeded — ignore */ }
+}
+
+export function removeAvatar(holderId) {
+  if (!holderId) return
+  try { localStorage.removeItem(AVATAR_KEY(holderId)) }
+  catch {}
+}
+
 export function relTypeLabel(type, lang='ar') {
   const map = {
     son:        { ar:'ابن / ابنة',      en:'Son / Daughter'   },
