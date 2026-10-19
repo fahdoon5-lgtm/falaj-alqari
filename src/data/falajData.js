@@ -252,6 +252,35 @@ export const USERS_MOCK = [
     status:'active', language:'ar',
     holderId:null, relationType:null,
   },
+  // ── حسابات اختبار جاهزة ─────────────────────────────────────────────────────
+  {
+    id:'u05', fullName:'أحمد بن خلفان الرمضاني',
+    username:'admin1', password:'Admin@2026',
+    phone:'+96896100001', role:'admin',
+    status:'active', language:'ar',
+    holderId:null, relationType:null,
+  },
+  {
+    id:'u06', fullName:'سيف بن محمد التوبي',
+    username:'user1', password:'User@2026',
+    phone:'+96896200001', role:'beneficiary',
+    status:'active', language:'ar',
+    holderId:'sh02', relationType:'owner',
+  },
+  {
+    id:'u07', fullName:'خلفان بن علي الحضرمي',
+    username:'user2', password:'User@2026',
+    phone:'+96896200002', role:'beneficiary',
+    status:'active', language:'ar',
+    holderId:'sh09', relationType:'owner',
+  },
+  {
+    id:'u08', fullName:'هلال بن محمد الجابري',
+    username:'user3', password:'User@2026',
+    phone:'+96896200003', role:'beneficiary',
+    status:'active', language:'ar',
+    holderId:'sh23', relationType:'owner',
+  },
 ]
 
 export const PENDING_REGISTRATIONS = [
