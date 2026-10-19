@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useApp } from '../hooks/useAppState'
 import { useCycle } from '../hooks/useCycleSettings'
 import { AAD_DAYS, SHARES } from '../data/falajData'
@@ -8,7 +8,14 @@ import { getCurrentAadInfo, resolveShareTimes } from '../utils/cycleEngine'
 export default function TransparencyPage() {
   const { currentUser, t } = useApp()
   const { cycleStart } = useCycle()
-  const [now] = useState(() => new Date())
+  const [now, setNow] = useState(() => new Date())
+
+  // تحديث الوقت كل ثانية حتى لا تتجمد مؤشرات "الآن"
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
   const info = getCurrentAadInfo(cycleStart, now)
 
   // Live current Aad and currently-active slot order

@@ -65,10 +65,12 @@ export default function BeneficiaryHome({ onTabChange, onPush }) {
 
   const info = getCurrentAadInfo(cycleStart, now)
 
-  // P-2: memoize stable turn schedule (realStart/realEnd don't change with now)
+  // P-2: memoize stable turn schedule (realStart/realEnd don't change within a cycle)
+  // نُعيد الحساب فقط عند تغيير cycleNumber حتى لا تبقى التواريخ من الدورة السابقة
   const turnSchedule = useMemo(
-    () => getMyTurns(currentUser.holderId, cycleStart),
-    [currentUser.holderId, cycleStart]
+    () => getMyTurns(currentUser.holderId, cycleStart, now),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentUser.holderId, cycleStart, info?.cycleNumber]
   )
   // Re-derive time-based flags every tick from cached schedule
   const myTurns = turnSchedule.map(turn => ({
