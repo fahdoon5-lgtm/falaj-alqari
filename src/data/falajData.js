@@ -265,21 +265,21 @@ export const USERS_MOCK = [
     username:'user1', password:'User@2026',
     phone:'+96896200001', role:'beneficiary',
     status:'active', language:'ar',
-    holderId:'sh02', relationType:'owner',
+    holderId:null, relationType:null,
   },
   {
     id:'u07', fullName:'خلفان بن علي الحضرمي',
     username:'user2', password:'User@2026',
     phone:'+96896200002', role:'beneficiary',
     status:'active', language:'ar',
-    holderId:'sh09', relationType:'owner',
+    holderId:null, relationType:null,
   },
   {
     id:'u08', fullName:'هلال بن محمد الجابري',
     username:'user3', password:'User@2026',
     phone:'+96896200003', role:'beneficiary',
     status:'active', language:'ar',
-    holderId:'sh23', relationType:'owner',
+    holderId:null, relationType:null,
   },
 ]
 
