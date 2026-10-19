@@ -14,11 +14,36 @@ export function AppProvider({ children }) {
   // holderNames: { holderId → overriddenName } applied on top of SHARE_HOLDERS
   const [holderNames, setHolderNames] = useState({})
   const [nameChangeRequests, setNameChangeRequests] = useState([])
+  const [loginLogs, setLoginLogs] = useState([])
 
   const login = (userId) => {
     const user = USERS_MOCK.find(u => u.id === userId)
-    if (user) setCurrentUser(user)
+    if (user) {
+      setCurrentUser(user)
+      const at = new Date().toLocaleString('ar-OM')
+      setLoginLogs(prev => [
+        { userId: user.id, fullName: user.fullName, role: user.role, username: user.username, at, ts: Date.now() },
+        ...prev,
+      ])
+    }
   }
+
+  const loginWithCredentials = (username, password) => {
+    const user = USERS_MOCK.find(u =>
+      u.username?.toLowerCase() === username.trim().toLowerCase() && u.password === password
+    )
+    if (user) {
+      setCurrentUser(user)
+      const at = new Date().toLocaleString('ar-OM')
+      setLoginLogs(prev => [
+        { userId: user.id, fullName: user.fullName, role: user.role, username: user.username, at, ts: Date.now() },
+        ...prev,
+      ])
+      return { ok: true }
+    }
+    return { ok: false }
+  }
+
   const logout = () => setCurrentUser(null)
 
   const t = (ar, en) => lang === 'ar' ? ar : en
@@ -107,7 +132,8 @@ export function AppProvider({ children }) {
 
   return (
     <AppCtx.Provider value={{
-      currentUser, login, logout,
+      currentUser, login, loginWithCredentials, logout,
+      loginLogs,
       lang, setLang, t,
       pendingRegs, approveReg, rejectReg,
       notifications, markNotifRead, unreadCount,

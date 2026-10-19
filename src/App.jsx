@@ -8,7 +8,7 @@ import NotificationsPanel from './components/NotificationsPanel'
 import BeneficiaryHome from './pages/BeneficiaryHome'
 import TransparencyPage from './pages/TransparencyPage'
 import { MyCyclePage, FarmsPage, NotesPage } from './pages/BeneficiaryPages'
-import { AdminHome, RegistrationsPage, SplitsPage, ShareholdersPage } from './pages/AdminPages'
+import { AdminHome, RegistrationsPage, SplitsPage, ShareholdersPage, LoginLogsPage } from './pages/AdminPages'
 import { SuperAdminHome, BroadcastPage, AuditPage } from './pages/SuperAdminPages'
 import CycleSettingsPage from './pages/CycleSettingsPage'
 
@@ -32,6 +32,7 @@ const SUPER_TABS = [
   { id:'registrations',icon:'ti-user-check',       ar:'التسجيل',   en:'Register'  },
   { id:'cycle_admin',  icon:'ti-clock-edit',       ar:'الدورة',    en:'Cycle'     },
   { id:'audit',        icon:'ti-shield-check',     ar:'التدقيق',   en:'Audit'     },
+  { id:'login_logs',   icon:'ti-clipboard-data',   ar:'السجلات',   en:'Logs'      },
 ]
 
 function renderPage(tab, page) {
@@ -42,6 +43,7 @@ function renderPage(tab, page) {
       case 'shareholders':   return <ShareholdersPage/>
       case 'broadcast':      return <BroadcastPage/>
       case 'audit':          return <AuditPage/>
+      case 'login_logs':     return <LoginLogsPage/>
       case 'cycle_settings': return <CycleSettingsPage/>
       default: break
     }
@@ -55,6 +57,7 @@ function renderPage(tab, page) {
     case 'splits':         return <SplitsPage/>
     case 'shareholders':   return <ShareholdersPage/>
     case 'audit':          return <AuditPage/>
+    case 'login_logs':     return <LoginLogsPage/>
     case 'cycle_admin':    return <CycleSettingsPage/>
     default:               return null
   }

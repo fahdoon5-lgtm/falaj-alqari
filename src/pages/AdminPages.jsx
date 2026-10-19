@@ -437,3 +437,111 @@ export function ShareholdersPage() {
     </div>
   )
 }
+
+/* ═══════════ LOGIN LOGS ═══════════ */
+export function LoginLogsPage() {
+  const { t, lang, loginLogs, auditLogs } = useApp()
+  const [tab, setTab] = useState('login')
+
+  const ROLE_COLOR = {
+    beneficiary:'#1A6B8A', admin:'#2D6A2D', super_admin:'#7A3055',
+  }
+  const ROLE_LABEL = {
+    beneficiary:{ar:'مستفيد',en:'Beneficiary'},
+    admin:{ar:'أدمن',en:'Admin'},
+    super_admin:{ar:'سوبر أدمن',en:'Super Admin'},
+  }
+
+  return (
+    <div className="page-content">
+      <div className="card">
+        <div className="card-head">
+          <span className="card-title">{t('سجلات النظام','System Logs')}</span>
+          <span className="badge badge-stone">{tab==='login'?loginLogs.length:auditLogs.length}</span>
+        </div>
+
+        {/* Tabs */}
+        <div style={{display:'flex',gap:0,borderBottom:'1px solid rgba(44,31,14,.08)',marginBottom:16,padding:'0 16px'}}>
+          {[
+            {id:'login', ar:'سجل الدخول', en:'Login Log', icon:'ti-login'},
+            {id:'audit', ar:'سجل التدقيق', en:'Audit Log', icon:'ti-clipboard-list'},
+          ].map(tb=>(
+            <button key={tb.id} onClick={()=>setTab(tb.id)}
+              style={{padding:'10px 16px',background:'none',border:'none',cursor:'pointer',
+                borderBottom:`2.5px solid ${tab===tb.id?'var(--c-water)':'transparent'}`,
+                color:tab===tb.id?'var(--c-water)':'var(--c-stone)',
+                fontWeight:tab===tb.id?700:400,fontSize:12,
+                display:'flex',alignItems:'center',gap:5,transition:'all .15s'}}>
+              <i className={`ti ${tb.icon}`} style={{fontSize:13}}/>
+              {lang==='ar'?tb.ar:tb.en}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'login' && (
+          <div style={{padding:'0 16px 16px'}}>
+            {loginLogs.length === 0 ? (
+              <div style={{textAlign:'center',padding:'24px 0',color:'var(--c-stone)',fontSize:12}}>
+                <i className="ti ti-clock" style={{fontSize:28,display:'block',marginBottom:8,opacity:.3}}/>
+                {t('لا توجد جلسات مسجّلة بعد','No sessions recorded yet')}
+              </div>
+            ) : loginLogs.map((log, i) => {
+              const rc = ROLE_COLOR[log.role] || '#888'
+              const rl = ROLE_LABEL[log.role]
+              return (
+                <div key={i} style={{display:'flex',alignItems:'center',gap:10,
+                  padding:'10px 0',borderBottom:'1px solid rgba(44,31,14,.05)'}}>
+                  <div style={{width:38,height:38,borderRadius:'50%',flexShrink:0,
+                    background:rc+'22',display:'flex',alignItems:'center',
+                    justifyContent:'center'}}>
+                    <i className="ti ti-user-check" style={{fontSize:16,color:rc}}/>
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12,fontWeight:700,color:'var(--c-soil)'}}>{log.fullName}</div>
+                    <div style={{fontSize:10,color:'var(--c-stone)',marginTop:2,display:'flex',gap:6,flexWrap:'wrap'}}>
+                      <code style={{background:'rgba(44,31,14,.06)',padding:'1px 5px',borderRadius:4}}>@{log.username}</code>
+                      <span style={{padding:'1px 6px',borderRadius:8,fontWeight:700,
+                        background:rc+'18',color:rc,border:`1px solid ${rc}30`,fontSize:9}}>
+                        {lang==='ar'?rl?.ar:rl?.en}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{fontSize:10,color:'var(--c-stone)',textAlign:'end',flexShrink:0}}>{log.at}</div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {tab === 'audit' && (
+          <div style={{padding:'0 16px 16px'}}>
+            {auditLogs.length === 0 ? (
+              <div style={{textAlign:'center',padding:'24px 0',color:'var(--c-stone)',fontSize:12}}>
+                <i className="ti ti-clipboard-list" style={{fontSize:28,display:'block',marginBottom:8,opacity:.3}}/>
+                {t('لا توجد أحداث مسجّلة بعد','No events recorded yet')}
+              </div>
+            ) : auditLogs.map((log, i) => (
+              <div key={i} style={{display:'flex',gap:10,padding:'10px 0',
+                borderBottom:'1px solid rgba(44,31,14,.05)'}}>
+                <div style={{width:38,height:38,borderRadius:'50%',flexShrink:0,
+                  background:'rgba(26,107,138,.1)',display:'flex',alignItems:'center',
+                  justifyContent:'center'}}>
+                  <i className="ti ti-clipboard-check" style={{fontSize:16,color:'var(--c-water)'}}/>
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12,fontWeight:700,color:'var(--c-soil)'}}>{log.action}</div>
+                  <div style={{fontSize:11,color:'var(--c-stone)',marginTop:2}}>{log.entity}</div>
+                  <div style={{fontSize:10,color:'var(--c-stone)',marginTop:3,display:'flex',gap:6,alignItems:'center'}}>
+                    <i className="ti ti-user" style={{fontSize:10}}/>
+                    {log.actor}
+                  </div>
+                </div>
+                <div style={{fontSize:10,color:'var(--c-stone)',textAlign:'end',flexShrink:0,paddingTop:2}}>{log.at}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
