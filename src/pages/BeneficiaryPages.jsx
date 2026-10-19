@@ -1,9 +1,15 @@
 import { useState } from 'react'
 import { useApp } from '../hooks/useAppState'
 import { useCycle } from '../hooks/useCycleSettings'
-import { AAD_DAYS, SHARES } from '../data/falajData'
+import { AAD_DAYS, SHARES, SHARE_HOLDERS } from '../data/falajData'
 import { formatAtharDuration } from '../utils/helpers'
 import { getCurrentAadInfo } from '../utils/cycleEngine'
+
+const BEN_REASONS = [
+  { id:'spelling',   ar:'تصحيح إملائي',     en:'Spelling correction'  },
+  { id:'full_name',  ar:'إضافة اسم الجد',    en:'Add grandfather name' },
+  { id:'other',      ar:'سبب آخر',           en:'Other reason'         },
+]
 
 /* ═══════════ MY CYCLE ═══════════ */
 export function MyCyclePage() {
@@ -133,6 +139,123 @@ export function FarmsPage() {
   )
 }
 
+/* ═══════════ NAME CHANGE REQUEST (inside NotesPage) ═══════════ */
+function NameChangeCard() {
+  const { t, lang, currentUser, holderNames, nameChangeRequests, requestNameChange } = useApp()
+
+  // All share holders linked to this user
+  const myHolders = SHARE_HOLDERS.filter(sh => sh.id === currentUser?.holderId)
+  const holder = myHolders[0]
+  if (!holder) return null
+
+  const displayName = holderNames[holder.id] || holder.name
+  const myReqs = nameChangeRequests.filter(r => r.holderId === holder.id)
+  const pending = myReqs.find(r => r.status === 'pending')
+  const lastApproved = myReqs.find(r => r.status === 'approved')
+
+  const [open, setOpen] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [reason, setReason] = useState(BEN_REASONS[0].id)
+  const [note, setNote] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+
+  const submit = () => {
+    if (!newName.trim() || newName.trim() === displayName) return
+    const reasonLabel = BEN_REASONS.find(r => r.id === reason)?.[lang==='ar'?'ar':'en'] || reason
+    requestNameChange({ holderId: holder.id, currentName: displayName, newName: newName.trim(), reason: reasonLabel, note: note.trim() })
+    setOpen(false); setNewName(''); setNote(''); setSubmitted(true)
+  }
+
+  return (
+    <div className="card" style={{marginBottom:0}}>
+      <div className="card-head">
+        <span className="card-title">{t('بيانات الحصة','Share Details')}</span>
+        <span className="badge badge-stone" style={{fontSize:10}}>{holder.tribe}</span>
+      </div>
+      <div className="card-body">
+        <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:12, padding:'10px 12px', background:'rgba(44,31,14,.04)', borderRadius:10}}>
+          <i className="ti ti-user-circle" style={{fontSize:22, color:'var(--c-water)'}}/>
+          <div style={{flex:1}}>
+            <div style={{fontSize:13, fontWeight:600, color:'var(--c-soil)'}}>{displayName}</div>
+            {lastApproved && <div style={{fontSize:10, color:'#1D9E75', marginTop:2}}>
+              <i className="ti ti-check" style={{fontSize:10}}/> {t('آخر تعديل معتمد','Last approved edit')}
+            </div>}
+          </div>
+        </div>
+
+        {/* Status banners */}
+        {pending && (
+          <div className="warn-box" style={{marginBottom:10, background:'rgba(200,132,26,.07)', borderColor:'rgba(200,132,26,.2)', color:'var(--c-sun)'}}>
+            <i className="ti ti-clock" style={{fontSize:14, flexShrink:0}}/>
+            <span style={{fontSize:12}}>
+              {t('طلب تعديل الاسم قيد المراجعة','Name change request under review')}
+              {' — '}<strong>{pending.newName}</strong>
+            </span>
+          </div>
+        )}
+        {submitted && !pending && (
+          <div className="info-box" style={{marginBottom:10}}>
+            <i className="ti ti-check" style={{fontSize:14, flexShrink:0}}/>
+            <span style={{fontSize:12}}>{t('تم إرسال طلبك بنجاح — بانتظار اعتماد الأدمن','Request sent — awaiting admin approval')}</span>
+          </div>
+        )}
+
+        {/* Request form */}
+        {!pending && (
+          <>
+            {!open ? (
+              <button className="btn btn-outline btn-full" style={{fontSize:12}} onClick={()=>setOpen(true)}>
+                <i className="ti ti-pencil" style={{fontSize:14}}/>
+                {t('طلب تعديل الاسم','Request name change')}
+              </button>
+            ) : (
+              <div style={{display:'flex', flexDirection:'column', gap:8}}>
+                <div className="form-group" style={{marginBottom:0}}>
+                  <label className="form-label" style={{fontSize:11}}>{t('الاسم المقترح','Proposed name')}</label>
+                  <input
+                    className="form-input"
+                    value={newName}
+                    onChange={e=>setNewName(e.target.value)}
+                    placeholder={displayName}
+                    autoFocus
+                    style={{fontSize:13}}
+                  />
+                </div>
+                <div className="form-group" style={{marginBottom:0}}>
+                  <label className="form-label" style={{fontSize:11}}>{t('سبب الطلب','Reason')}</label>
+                  <select className="form-input" value={reason} onChange={e=>setReason(e.target.value)} style={{fontSize:12}}>
+                    {BEN_REASONS.map(r=>(
+                      <option key={r.id} value={r.id}>{lang==='ar'?r.ar:r.en}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group" style={{marginBottom:0}}>
+                  <label className="form-label" style={{fontSize:11}}>{t('تفاصيل (اختياري)','Details (optional)')}</label>
+                  <input
+                    className="form-input"
+                    value={note}
+                    onChange={e=>setNote(e.target.value)}
+                    placeholder={t('مثال: الاسم الصحيح هو...','e.g. The correct name is...')}
+                    style={{fontSize:12}}
+                  />
+                </div>
+                <div className="btn-row" style={{marginTop:2}}>
+                  <button className="btn btn-primary btn-sm" style={{flex:1}} onClick={submit} disabled={!newName.trim() || newName.trim()===displayName}>
+                    <i className="ti ti-send"/>{t('إرسال الطلب','Send request')}
+                  </button>
+                  <button className="btn btn-outline btn-sm" style={{flex:1}} onClick={()=>{setOpen(false);setNewName('');setNote('')}}>
+                    {t('إلغاء','Cancel')}
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 /* ═══════════ NOTES ═══════════ */
 export function NotesPage() {
   const { t, currentUser } = useApp()
@@ -150,6 +273,9 @@ export function NotesPage() {
 
   return (
     <div className="page-content">
+
+      <NameChangeCard/>
+
       <div className="card">
         <div className="card-head">
           <span className="card-title">{t('ملاحظاتي الخاصة','My Private Notes')}</span>

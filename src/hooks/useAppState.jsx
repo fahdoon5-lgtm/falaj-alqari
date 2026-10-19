@@ -11,6 +11,9 @@ export function AppProvider({ children }) {
   const [notifications, setNotifications] = useState(NOTIFICATIONS_MOCK)
   const [reminderLogs, setReminderLogs] = useState([])
   const [auditLogs, setAuditLogs] = useState([])
+  // holderNames: { holderId → overriddenName } applied on top of SHARE_HOLDERS
+  const [holderNames, setHolderNames] = useState({})
+  const [nameChangeRequests, setNameChangeRequests] = useState([])
 
   const login = (userId) => {
     const user = USERS_MOCK.find(u => u.id === userId)
@@ -44,6 +47,62 @@ export function AppProvider({ children }) {
     setReminderLogs(prev => [entry, ...prev])
   }
 
+  // ─── Name-change: direct edit by admin ────────────────────────────────────
+  const directEditName = ({ holderId, currentName, newName, reason, note }) => {
+    setHolderNames(prev => ({ ...prev, [holderId]: newName }))
+    logAudit({
+      actor: currentUser?.fullName || '—',
+      action: `تعديل اسم — ${reason}`,
+      entity: `${currentName} ← ${newName}${note ? ' · ' + note : ''}`,
+    })
+  }
+
+  // ─── Name-change: beneficiary request ─────────────────────────────────────
+  const requestNameChange = ({ holderId, currentName, newName, reason, note }) => {
+    const id = `ncr_${Date.now()}`
+    setNameChangeRequests(prev => [
+      {
+        id, holderId, currentName, newName, reason, note,
+        requestedBy: currentUser?.id,
+        requestedByName: currentUser?.fullName,
+        requestedAt: new Date().toLocaleString('ar-OM'),
+        status: 'pending',
+        reviewedBy: null, reviewedAt: null,
+      },
+      ...prev,
+    ])
+  }
+
+  const approveNameChange = (reqId) => {
+    const req = nameChangeRequests.find(r => r.id === reqId)
+    if (!req) return
+    setHolderNames(prev => ({ ...prev, [req.holderId]: req.newName }))
+    setNameChangeRequests(prev => prev.map(r => r.id === reqId
+      ? { ...r, status: 'approved', reviewedBy: currentUser?.fullName, reviewedAt: new Date().toLocaleString('ar-OM') }
+      : r
+    ))
+    logAudit({
+      actor: currentUser?.fullName || '—',
+      action: `اعتماد تعديل اسم — ${req.reason}`,
+      entity: `${req.currentName} ← ${req.newName}`,
+    })
+  }
+
+  const rejectNameChange = (reqId) => {
+    const req = nameChangeRequests.find(r => r.id === reqId)
+    if (req) logAudit({
+      actor: currentUser?.fullName || '—',
+      action: 'رفض تعديل اسم',
+      entity: req.currentName,
+    })
+    setNameChangeRequests(prev => prev.map(r => r.id === reqId
+      ? { ...r, status: 'rejected', reviewedBy: currentUser?.fullName, reviewedAt: new Date().toLocaleString('ar-OM') }
+      : r
+    ))
+  }
+
+  const pendingNameChanges = nameChangeRequests.filter(r => r.status === 'pending')
+
   const unreadCount = notifications.filter(n => !n.isRead).length
 
   return (
@@ -54,6 +113,9 @@ export function AppProvider({ children }) {
       notifications, markNotifRead, unreadCount,
       reminderLogs, logReminder,
       auditLogs, logAudit,
+      holderNames, directEditName,
+      nameChangeRequests, pendingNameChanges,
+      requestNameChange, approveNameChange, rejectNameChange,
     }}>
       {children}
     </AppCtx.Provider>

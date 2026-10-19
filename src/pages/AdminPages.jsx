@@ -268,36 +268,170 @@ export function SplitsPage() {
 }
 
 /* ═══════════ SHAREHOLDERS LIST ═══════════ */
+const NAME_CHANGE_REASONS = [
+  { id:'beneficiary_request', ar:'طلب من المستفيد',   en:'Beneficiary request'   },
+  { id:'sale',                ar:'بيع حصة',            en:'Share sale'             },
+  { id:'inheritance',         ar:'إرث',                en:'Inheritance'            },
+  { id:'spelling',            ar:'تصحيح إملائي',       en:'Spelling correction'    },
+  { id:'other',               ar:'أخرى',               en:'Other'                  },
+]
+
 export function ShareholdersPage() {
-  const { t } = useApp()
-  const [query, setQuery] = useState('')
+  const { t, lang, holderNames, directEditName, pendingNameChanges, approveNameChange, rejectNameChange } = useApp()
+  const [query, setQuery]       = useState('')
+  const [editId, setEditId]     = useState(null)   // holderId being edited
+  const [editName, setEditName] = useState('')
+  const [editReason, setEditReason] = useState(NAME_CHANGE_REASONS[0].id)
+  const [editNote, setEditNote] = useState('')
 
   const filtered = useMemo(
     () => SHARE_HOLDERS.filter(s => !query || s.name.includes(query) || s.tribe.includes(query)),
     [query]
   )
 
+  const startEdit = (sh) => {
+    setEditId(sh.id)
+    setEditName(holderNames[sh.id] || sh.name)
+    setEditReason(NAME_CHANGE_REASONS[0].id)
+    setEditNote('')
+  }
+
+  const cancelEdit = () => { setEditId(null); setEditName(''); setEditNote('') }
+
+  const saveEdit = (sh) => {
+    if (!editName.trim() || editName.trim() === (holderNames[sh.id] || sh.name)) { cancelEdit(); return }
+    const reasonLabel = NAME_CHANGE_REASONS.find(r => r.id === editReason)?.[lang==='ar'?'ar':'en'] || editReason
+    directEditName({ holderId: sh.id, currentName: holderNames[sh.id] || sh.name, newName: editName.trim(), reason: reasonLabel, note: editNote.trim() })
+    cancelEdit()
+  }
+
   return (
     <div className="page-content">
+
+      {/* Pending name-change requests from beneficiaries */}
+      {pendingNameChanges.length > 0 && (
+        <div className="card" style={{borderRight:'3px solid var(--c-sun)'}}>
+          <div className="card-head">
+            <span className="card-title">{t('طلبات تعديل الاسم','Name Change Requests')}</span>
+            <span className="badge badge-sun">{pendingNameChanges.length}</span>
+          </div>
+          <div className="card-body" style={{padding:0}}>
+            {pendingNameChanges.map(req => (
+              <div key={req.id} style={{padding:'12px 14px', borderBottom:'1px solid rgba(44,31,14,.06)'}}>
+                <div style={{fontSize:12, color:'var(--c-stone)', marginBottom:6}}>
+                  <span style={{fontWeight:600, color:'var(--c-soil)'}}>{req.requestedByName}</span>
+                  {' · '}{req.requestedAt}
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:4, flexWrap:'wrap'}}>
+                  <span style={{fontSize:12, color:'var(--c-stone)', textDecoration:'line-through'}}>{req.currentName}</span>
+                  <i className="ti ti-arrow-left" style={{fontSize:11, color:'var(--c-stone)'}}/>
+                  <span style={{fontSize:13, fontWeight:600, color:'var(--c-soil)'}}>{req.newName}</span>
+                </div>
+                <div style={{fontSize:11, color:'var(--c-water)', marginBottom:10}}>
+                  {t('السبب:','Reason:')} {req.reason}{req.note ? ` · ${req.note}` : ''}
+                </div>
+                <div className="btn-row" style={{marginTop:0}}>
+                  <button className="btn btn-palm btn-sm" style={{flex:1}} onClick={()=>approveNameChange(req.id)}>
+                    <i className="ti ti-check"/>{t('اعتماد','Approve')}
+                  </button>
+                  <button className="btn btn-danger btn-sm" style={{flex:1}} onClick={()=>rejectNameChange(req.id)}>
+                    <i className="ti ti-x"/>{t('رفض','Reject')}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="search-wrap">
         <i className="ti ti-search" aria-hidden="true"/>
         <input value={query} onChange={e=>setQuery(e.target.value)} placeholder={t('بحث باسم الملك أو القبيلة...','Search by name or tribe...')}/>
         {query && <i className="ti ti-x" style={{cursor:'pointer'}} onClick={()=>setQuery('')} aria-hidden="true"/>}
       </div>
+
       <div className="card">
-        <div style={{maxHeight:500, overflowY:'auto'}}>
-          {filtered.map(sh => (
-            <div key={sh.id} style={{display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderBottom:'1px solid rgba(44,31,14,.05)'}}>
-              <div className="av" style={{background:holderColor(sh.id), width:32, height:32, fontSize:11}}>{initials(sh.name)}</div>
-              <div style={{flex:1}}>
-                <div style={{fontSize:12.5, fontWeight:500, color:'var(--c-soil)'}}>{sh.name}</div>
-                <div style={{fontSize:11, color:'var(--c-stone)', marginTop:1}}>{sh.tribe}</div>
+        <div style={{maxHeight:520, overflowY:'auto'}}>
+          {filtered.map(sh => {
+            const displayName = holderNames[sh.id] || sh.name
+            const isEditing = editId === sh.id
+            const wasEdited = !!holderNames[sh.id]
+            return (
+              <div key={sh.id} style={{borderBottom:'1px solid rgba(44,31,14,.05)'}}>
+                <div style={{display:'flex', alignItems:'center', gap:10, padding:'10px 14px'}}>
+                  <div className="av" style={{background:holderColor(sh.id), width:32, height:32, fontSize:11, flexShrink:0}}>{initials(displayName)}</div>
+                  <div style={{flex:1}}>
+                    <div style={{display:'flex', alignItems:'center', gap:5}}>
+                      <div style={{fontSize:12.5, fontWeight:500, color:'var(--c-soil)'}}>{displayName}</div>
+                      {wasEdited && <i className="ti ti-pencil-check" style={{fontSize:10, color:'var(--c-water)'}} title={sh.name}/>}
+                    </div>
+                    {wasEdited && <div style={{fontSize:10, color:'var(--c-stone)', textDecoration:'line-through', marginTop:1}}>{sh.name}</div>}
+                    <div style={{fontSize:11, color:'var(--c-stone)', marginTop:wasEdited?0:1}}>{sh.tribe}</div>
+                  </div>
+                  <span className={`badge ${sh.type==='heirs'||sh.type==='joint'?'badge-dusk':sh.type==='mosque'?'badge-water':'badge-stone'}`} style={{fontSize:10}}>
+                    {sh.type==='heirs'?t('ورثة','Heirs'):sh.type==='joint'?t('مشترك','Joint'):sh.type==='mosque'?t('مسجد','Mosque'):t('فرد','Individual')}
+                  </span>
+                  {sh.type !== 'mosque' && (
+                    <button
+                      style={{background:'none', border:'none', cursor:'pointer', padding:'4px 6px', borderRadius:6, color:'var(--c-stone)'}}
+                      onClick={()=> isEditing ? cancelEdit() : startEdit(sh)}
+                      title={t('تعديل الاسم','Edit name')}
+                    >
+                      <i className={`ti ti-${isEditing?'x':'pencil'}`} style={{fontSize:14}}/>
+                    </button>
+                  )}
+                </div>
+
+                {/* Inline edit form */}
+                {isEditing && (
+                  <div style={{margin:'0 14px 12px', padding:12, background:'rgba(26,107,138,.05)', borderRadius:10, border:'1px solid rgba(26,107,138,.15)'}}>
+                    <div className="form-group" style={{marginBottom:8}}>
+                      <label className="form-label" style={{fontSize:11}}>{t('الاسم الجديد','New name')}</label>
+                      <input
+                        className="form-input"
+                        value={editName}
+                        onChange={e=>setEditName(e.target.value)}
+                        placeholder={t('أدخل الاسم...','Enter name...')}
+                        autoFocus
+                        style={{fontSize:13}}
+                      />
+                    </div>
+                    <div className="form-group" style={{marginBottom:8}}>
+                      <label className="form-label" style={{fontSize:11}}>{t('سبب التعديل','Reason')}</label>
+                      <select
+                        className="form-input"
+                        value={editReason}
+                        onChange={e=>setEditReason(e.target.value)}
+                        style={{fontSize:12}}
+                      >
+                        {NAME_CHANGE_REASONS.map(r=>(
+                          <option key={r.id} value={r.id}>{lang==='ar'?r.ar:r.en}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group" style={{marginBottom:10}}>
+                      <label className="form-label" style={{fontSize:11}}>{t('ملاحظة (اختياري)','Note (optional)')}</label>
+                      <input
+                        className="form-input"
+                        value={editNote}
+                        onChange={e=>setEditNote(e.target.value)}
+                        placeholder={t('تفاصيل إضافية...','Additional details...')}
+                        style={{fontSize:12}}
+                      />
+                    </div>
+                    <div className="btn-row" style={{marginTop:0}}>
+                      <button className="btn btn-primary btn-sm" style={{flex:1}} onClick={()=>saveEdit(sh)}>
+                        <i className="ti ti-check"/>{t('حفظ','Save')}
+                      </button>
+                      <button className="btn btn-outline btn-sm" style={{flex:1}} onClick={cancelEdit}>
+                        {t('إلغاء','Cancel')}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-              <span className={`badge ${sh.type==='heirs'||sh.type==='joint'?'badge-dusk':sh.type==='mosque'?'badge-water':'badge-stone'}`} style={{fontSize:10}}>
-                {sh.type==='heirs'?t('ورثة','Heirs'):sh.type==='joint'?t('مشترك','Joint'):sh.type==='mosque'?t('مسجد','Mosque'):t('فرد','Individual')}
-              </span>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </div>
