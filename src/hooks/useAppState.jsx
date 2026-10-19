@@ -1,23 +1,64 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
 import { USERS_MOCK, PENDING_REGISTRATIONS, NOTIFICATIONS_MOCK } from '../data/falajData'
+
+// ─── localStorage helpers ─────────────────────────────────────────────────────
+const LS = {
+  USERS:        'athar_v1_users',
+  HOLDER_NAMES: 'athar_v1_holder_names',
+  PENDING_REGS: 'athar_v1_pending_regs',
+  SESSION:      'athar_v1_session',
+  LOGIN_LOGS:   'athar_v1_login_logs',
+  AUDIT_LOGS:   'athar_v1_audit_logs',
+  NAME_CHANGES: 'athar_v1_name_changes',
+}
+
+const lsGet = (key, fallback) => {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback }
+  catch { return fallback }
+}
+const lsSet = (key, val) => {
+  try { localStorage.setItem(key, JSON.stringify(val)) }
+  catch (e) { console.warn('[athar] localStorage write failed:', key, e.message) }
+}
 
 const AppCtx = createContext(null)
 export const useApp = () => useContext(AppCtx)
 
 export function AppProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState(null)
   const [lang, setLang] = useState('ar')
-  // Dynamic user list — starts with seed (Fahad only), grows as registrations are approved
-  const [users, setUsers] = useState(USERS_MOCK)
-  const [pendingRegs, setPendingRegs] = useState(PENDING_REGISTRATIONS)
-  const [notifications, setNotifications] = useState(NOTIFICATIONS_MOCK)
-  const [reminderLogs, setReminderLogs] = useState([])
-  const [auditLogs, setAuditLogs] = useState([])
-  // holderNames: { holderId → overriddenName } applied on top of SHARE_HOLDERS
-  const [holderNames, setHolderNames] = useState({})
-  const [nameChangeRequests, setNameChangeRequests] = useState([])
-  const [loginLogs, setLoginLogs] = useState([])
 
+  // ── State — initialised from localStorage (lazy init) ──────────────────────
+  const [users, setUsers] = useState(() => lsGet(LS.USERS, USERS_MOCK))
+
+  const [pendingRegs, setPendingRegs] = useState(
+    () => lsGet(LS.PENDING_REGS, PENDING_REGISTRATIONS)
+  )
+  const [notifications, setNotifications] = useState(NOTIFICATIONS_MOCK)
+  const [reminderLogs, setReminderLogs]   = useState([])
+  const [auditLogs, setAuditLogs]         = useState(() => lsGet(LS.AUDIT_LOGS, []))
+  const [holderNames, setHolderNames]     = useState(() => lsGet(LS.HOLDER_NAMES, {}))
+  const [nameChangeRequests, setNameChangeRequests] = useState(
+    () => lsGet(LS.NAME_CHANGES, [])
+  )
+  const [loginLogs, setLoginLogs] = useState(() => lsGet(LS.LOGIN_LOGS, []))
+
+  // currentUser — restored from "remember me" session on first load
+  const [currentUser, setCurrentUser] = useState(() => {
+    const session = lsGet(LS.SESSION, null)
+    if (!session?.userId || !session?.remember) return null
+    const savedUsers = lsGet(LS.USERS, USERS_MOCK)
+    return savedUsers.find(u => u.id === session.userId) || null
+  })
+
+  // ── Persist to localStorage whenever state changes ──────────────────────────
+  useEffect(() => { lsSet(LS.USERS,        users)              }, [users])
+  useEffect(() => { lsSet(LS.HOLDER_NAMES, holderNames)        }, [holderNames])
+  useEffect(() => { lsSet(LS.PENDING_REGS, pendingRegs)        }, [pendingRegs])
+  useEffect(() => { lsSet(LS.LOGIN_LOGS,   loginLogs)          }, [loginLogs])
+  useEffect(() => { lsSet(LS.AUDIT_LOGS,   auditLogs)          }, [auditLogs])
+  useEffect(() => { lsSet(LS.NAME_CHANGES, nameChangeRequests) }, [nameChangeRequests])
+
+  // ── Auth ────────────────────────────────────────────────────────────────────
   const _recordLogin = (user) => {
     const at = new Date().toLocaleString('ar-OM')
     setLoginLogs(prev => [
@@ -31,15 +72,24 @@ export function AppProvider({ children }) {
     if (user) { setCurrentUser(user); _recordLogin(user) }
   }
 
-  const loginWithCredentials = (username, password) => {
+  // remember = true → save session in localStorage so next open auto-logs in
+  const loginWithCredentials = (username, password, remember = false) => {
     const user = users.find(u =>
       u.username?.toLowerCase() === username.trim().toLowerCase() && u.password === password
     )
-    if (user) { setCurrentUser(user); _recordLogin(user); return { ok: true } }
+    if (user) {
+      setCurrentUser(user)
+      _recordLogin(user)
+      lsSet(LS.SESSION, remember ? { userId: user.id, remember: true } : null)
+      return { ok: true }
+    }
     return { ok: false }
   }
 
-  const logout = () => setCurrentUser(null)
+  const logout = () => {
+    setCurrentUser(null)
+    lsSet(LS.SESSION, null)
+  }
 
   const t = (ar, en) => lang === 'ar' ? ar : en
 
@@ -58,7 +108,7 @@ export function AppProvider({ children }) {
       username,
       password,
       phone: reg.phone,
-      role,          // 'beneficiary' | 'admin'
+      role,
       status: 'active',
       language: 'ar',
       holderId: holderId || reg.requestedHolderId || null,
@@ -87,14 +137,18 @@ export function AppProvider({ children }) {
     setReminderLogs(prev => [entry, ...prev])
   }
 
-  // ─── Avatar upload ────────────────────────────────────────────────────────
+  // ─── Avatar upload — also refreshes currentUser if it's the same person ────
   const updateAvatar = (userId, avatarDataUrl) => {
     setUsers(prev => prev.map(u => u.id === userId ? { ...u, avatar: avatarDataUrl } : u))
+    if (currentUser?.id === userId)
+      setCurrentUser(prev => prev ? { ...prev, avatar: avatarDataUrl } : prev)
   }
 
   // ─── Edit registered user's display name ─────────────────────────────────
   const updateUserName = (userId, newName, oldName) => {
     setUsers(prev => prev.map(u => u.id === userId ? { ...u, fullName: newName } : u))
+    if (currentUser?.id === userId)
+      setCurrentUser(prev => prev ? { ...prev, fullName: newName } : prev)
     logAudit({
       actor: currentUser?.fullName || '—',
       action: 'تعديل اسم مستخدم مسجّل',

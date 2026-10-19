@@ -191,7 +191,6 @@ export function UsersManagePage() {
       <div className="card">
         {filtered.map(u => {
           const rm   = ROLE_META[u.role] || ROLE_META.beneficiary
-          const isMe = u.role === 'super_admin'
           const isEditing = editId === u.id
           return (
             <div key={u.id} style={{borderBottom:'1px solid rgba(44,31,14,.06)'}}>
@@ -217,15 +216,13 @@ export function UsersManagePage() {
                     background:rm.color+'18',color:rm.color,border:`1px solid ${rm.color}30`}}>
                     {lang==='ar'?rm.ar:rm.en}
                   </span>
-                  {!isMe && (
-                    <button
-                      style={{background:'none',border:'none',cursor:'pointer',
-                        padding:'3px 6px',borderRadius:6,color:'var(--c-stone)',fontSize:13}}
-                      onClick={()=> isEditing ? cancelEdit() : startEdit(u)}
-                      title={t('تعديل الاسم','Edit name')}>
-                      <i className={`ti ti-${isEditing?'x':'pencil'}`} style={{fontSize:13}}/>
-                    </button>
-                  )}
+                  <button
+                    style={{background:'none',border:'none',cursor:'pointer',
+                      padding:'3px 6px',borderRadius:6,color:'var(--c-stone)',fontSize:13}}
+                    onClick={()=> isEditing ? cancelEdit() : startEdit(u)}
+                    title={t('تعديل الاسم','Edit name')}>
+                    <i className={`ti ti-${isEditing?'x':'pencil'}`} style={{fontSize:13}}/>
+                  </button>
                 </div>
               </div>
 

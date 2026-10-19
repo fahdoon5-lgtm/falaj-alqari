@@ -12,6 +12,7 @@ export default function LoginScreen() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
+  const [remember, setRemember] = useState(false)
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
 
@@ -34,7 +35,7 @@ export default function LoginScreen() {
     }
     setLoading(true)
     setTimeout(() => {
-      const result = loginWithCredentials(username, password)
+      const result = loginWithCredentials(username, password, remember)
       setLoading(false)
       if (!result.ok) {
         setError(t('اسم المستخدم أو كلمة المرور غير صحيحة','Incorrect username or password'))
@@ -163,6 +164,23 @@ export default function LoginScreen() {
             </button>
           </div>
         </div>
+
+        {/* Remember me */}
+        <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',
+          marginBottom:14,userSelect:'none',direction:lang==='ar'?'rtl':'ltr'}}>
+          <div onClick={()=>setRemember(v=>!v)}
+            style={{width:18,height:18,borderRadius:5,flexShrink:0,
+              border:`2px solid ${remember?'var(--c-water)':'rgba(44,31,14,.25)'}`,
+              background:remember?'var(--c-water)':'transparent',
+              display:'flex',alignItems:'center',justifyContent:'center',
+              transition:'all .15s',cursor:'pointer'}}>
+            {remember && <i className="ti ti-check" style={{fontSize:11,color:'#fff'}}/>}
+          </div>
+          <span style={{fontSize:12,color:'var(--c-stone)',lineHeight:1.3}}>
+            {t('تذكّرني — لا تسألني عن كلمة المرور في المرة القادمة',
+               'Remember me — stay signed in next time')}
+          </span>
+        </label>
 
         {/* Error */}
         {error && (

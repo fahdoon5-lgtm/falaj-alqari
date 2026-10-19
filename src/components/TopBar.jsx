@@ -14,7 +14,23 @@ export default function TopBar({ onNotifClick }) {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = (ev) => updateAvatar(currentUser.id, ev.target.result)
+    reader.onload = (ev) => {
+      const img = new Image()
+      img.onload = () => {
+        const MAX = 200
+        const ratio = Math.min(MAX / img.width, MAX / img.height, 1)
+        const w = Math.round(img.width  * ratio)
+        const h = Math.round(img.height * ratio)
+        const canvas = document.createElement('canvas')
+        canvas.width  = w
+        canvas.height = h
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0, w, h)
+        const compressed = canvas.toDataURL('image/jpeg', 0.82)
+        updateAvatar(currentUser.id, compressed)
+      }
+      img.src = ev.target.result
+    }
     reader.readAsDataURL(file)
     e.target.value = ''
   }
