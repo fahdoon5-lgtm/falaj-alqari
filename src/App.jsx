@@ -183,7 +183,7 @@ function SplashScreen() {
       }}>
         💧
       </div>
-      <div style={{fontFamily:'var(--font-ar)', fontWeight:700, fontSize:18}}>فلج القاري</div>
+      <div style={{fontFamily:'var(--font-ar)', fontWeight:700, fontSize:18}}>فلج القري</div>
       <div style={{
         width:32, height:32, border:'3px solid var(--border)',
         borderTopColor:'var(--accent)', borderRadius:'50%',
