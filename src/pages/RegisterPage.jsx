@@ -48,7 +48,7 @@ function StepIndicator({ current }) {
 }
 
 export default function RegisterPage({ onBack, onSuccess }) {
-  const { t, lang } = useApp()
+  const { t, lang, submitRegistration } = useApp()
   const [step, setStep]   = useState('personal')
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
@@ -94,9 +94,19 @@ export default function RegisterPage({ onBack, onSuccess }) {
 
   const submit = async () => {
     setSubmitting(true)
-    await new Promise(r => setTimeout(r, 1500))
+    const result = await submitRegistration({
+      fullName: form.fullName,
+      phone: form.phone,
+      requestedHolderId: form.holderId,
+      relationType: form.relationType,
+      relationNote: form.relationNote,
+    })
     setSubmitting(false)
-    onSuccess({ ...form, submittedAt: new Date().toISOString() })
+    if (result?.ok) {
+      onSuccess({ ...form, submittedAt: new Date().toISOString() })
+    } else {
+      setErrors({ submit: t('حدث خطأ، حاول مرة أخرى', 'An error occurred, please try again') })
+    }
   }
 
   const holder = SHARE_HOLDERS.find(s => s.id === form.holderId)

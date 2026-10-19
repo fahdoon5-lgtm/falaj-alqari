@@ -169,8 +169,34 @@ function SuperAdminApp() {
   )
 }
 
+function SplashScreen() {
+  return (
+    <div style={{
+      minHeight:'100dvh', display:'flex', flexDirection:'column',
+      alignItems:'center', justifyContent:'center', gap:16,
+      background:'var(--bg)', color:'var(--text)',
+    }}>
+      <div style={{
+        width:56, height:56, borderRadius:16,
+        background:'var(--accent)', display:'flex', alignItems:'center', justifyContent:'center',
+        fontSize:28, boxShadow:'0 4px 20px var(--accent-a20)',
+      }}>
+        💧
+      </div>
+      <div style={{fontFamily:'var(--font-ar)', fontWeight:700, fontSize:18}}>فلج القاري</div>
+      <div style={{
+        width:32, height:32, border:'3px solid var(--border)',
+        borderTopColor:'var(--accent)', borderRadius:'50%',
+        animation:'spin 0.7s linear infinite',
+      }}/>
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+    </div>
+  )
+}
+
 function RootApp() {
-  const { currentUser } = useApp()
+  const { currentUser, appReady } = useApp()
+  if (!appReady) return <SplashScreen/>
   if (!currentUser) return <LoginScreen/>
   switch(currentUser.role) {
     case 'beneficiary': return <BeneficiaryApp/>
