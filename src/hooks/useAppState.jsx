@@ -7,6 +7,8 @@ export const useApp = () => useContext(AppCtx)
 export function AppProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null)
   const [lang, setLang] = useState('ar')
+  // Dynamic user list — starts with seed (Fahad only), grows as registrations are approved
+  const [users, setUsers] = useState(USERS_MOCK)
   const [pendingRegs, setPendingRegs] = useState(PENDING_REGISTRATIONS)
   const [notifications, setNotifications] = useState(NOTIFICATIONS_MOCK)
   const [reminderLogs, setReminderLogs] = useState([])
@@ -16,31 +18,24 @@ export function AppProvider({ children }) {
   const [nameChangeRequests, setNameChangeRequests] = useState([])
   const [loginLogs, setLoginLogs] = useState([])
 
+  const _recordLogin = (user) => {
+    const at = new Date().toLocaleString('ar-OM')
+    setLoginLogs(prev => [
+      { userId: user.id, fullName: user.fullName, role: user.role, username: user.username, at, ts: Date.now() },
+      ...prev,
+    ])
+  }
+
   const login = (userId) => {
-    const user = USERS_MOCK.find(u => u.id === userId)
-    if (user) {
-      setCurrentUser(user)
-      const at = new Date().toLocaleString('ar-OM')
-      setLoginLogs(prev => [
-        { userId: user.id, fullName: user.fullName, role: user.role, username: user.username, at, ts: Date.now() },
-        ...prev,
-      ])
-    }
+    const user = users.find(u => u.id === userId)
+    if (user) { setCurrentUser(user); _recordLogin(user) }
   }
 
   const loginWithCredentials = (username, password) => {
-    const user = USERS_MOCK.find(u =>
+    const user = users.find(u =>
       u.username?.toLowerCase() === username.trim().toLowerCase() && u.password === password
     )
-    if (user) {
-      setCurrentUser(user)
-      const at = new Date().toLocaleString('ar-OM')
-      setLoginLogs(prev => [
-        { userId: user.id, fullName: user.fullName, role: user.role, username: user.username, at, ts: Date.now() },
-        ...prev,
-      ])
-      return { ok: true }
-    }
+    if (user) { setCurrentUser(user); _recordLogin(user); return { ok: true } }
     return { ok: false }
   }
 
@@ -53,11 +48,31 @@ export function AppProvider({ children }) {
     setAuditLogs(prev => [{ actor, action, entity, at }, ...prev])
   }
 
-  const approveReg = (regId) => {
+  // ─── Approve registration: assign role + credentials then add user ─────────
+  const approveReg = (regId, { role, username, password, holderId }) => {
     const reg = pendingRegs.find(r => r.id === regId)
-    if (reg) logAudit({ actor: currentUser?.fullName || '—', action: 'اعتماد تسجيل', entity: reg.fullName })
+    if (!reg) return
+    const newUser = {
+      id: `u_${Date.now()}`,
+      fullName: reg.fullName,
+      username,
+      password,
+      phone: reg.phone,
+      role,          // 'beneficiary' | 'admin'
+      status: 'active',
+      language: 'ar',
+      holderId: holderId || reg.requestedHolderId || null,
+      relationType: reg.relationType || null,
+    }
+    setUsers(prev => [...prev, newUser])
     setPendingRegs(prev => prev.filter(r => r.id !== regId))
+    logAudit({
+      actor: currentUser?.fullName || '—',
+      action: `اعتماد تسجيل — ${role === 'admin' ? 'أدمن' : 'مستفيد'}`,
+      entity: `${reg.fullName} (@${username})`,
+    })
   }
+
   const rejectReg = (regId) => {
     const reg = pendingRegs.find(r => r.id === regId)
     if (reg) logAudit({ actor: currentUser?.fullName || '—', action: 'رفض تسجيل', entity: reg.fullName })
@@ -127,13 +142,12 @@ export function AppProvider({ children }) {
   }
 
   const pendingNameChanges = nameChangeRequests.filter(r => r.status === 'pending')
-
   const unreadCount = notifications.filter(n => !n.isRead).length
 
   return (
     <AppCtx.Provider value={{
       currentUser, login, loginWithCredentials, logout,
-      loginLogs,
+      users, loginLogs,
       lang, setLang, t,
       pendingRegs, approveReg, rejectReg,
       notifications, markNotifRead, unreadCount,

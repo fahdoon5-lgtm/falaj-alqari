@@ -243,31 +243,8 @@ export const SHARES = {
   ],
 }
 
+// Only Fahad pre-seeded. All other users come through the registration + approval flow.
 export const USERS_MOCK = [
-  {
-    id:'u01', fullName:'خليفة بن محفوظ التوبي',
-    username:'khalifa', password:'Falaj@1234',
-    phone:'+96891234567', role:'beneficiary',
-    status:'active', language:'ar',
-    holderId:'sh12',
-    relationType:'individual',
-    workerName:'سعيد بن ناصر', workerPhone:'+96899887766',
-    notifyHoursBefore:3, notifyChannel:'whatsapp',
-  },
-  {
-    id:'u02', fullName:'أحمد بن سيف الرمضاني',
-    username:'ahmed', password:'Admin@5678',
-    phone:'+96891111111', role:'admin',
-    status:'active', language:'ar',
-    holderId:null, relationType:null,
-  },
-  {
-    id:'u03', fullName:'سيف بن خلفان الرمضاني',
-    username:'saif', password:'Admin@1234',
-    phone:'+96892222222', role:'super_admin',
-    status:'active', language:'ar',
-    holderId:null, relationType:null,
-  },
   {
     id:'u04', fullName:'فهد الدوسري',
     username:'fahad', password:'Athar@2026',

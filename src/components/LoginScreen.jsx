@@ -2,13 +2,6 @@ import { useState } from 'react'
 import { useApp } from '../hooks/useAppState'
 import RegisterPage from '../pages/RegisterPage'
 import SuccessPage from '../pages/SuccessPage'
-import { USERS_MOCK } from '../data/falajData'
-
-const ROLE_COLOR = {
-  beneficiary:  { bg:'#1A6B8A', label:'مستفيد',    labelEn:'Beneficiary'  },
-  admin:        { bg:'#2D6A2D', label:'أدمن',       labelEn:'Admin'        },
-  super_admin:  { bg:'#7A3055', label:'سوبر أدمن',  labelEn:'Super Admin'  },
-}
 
 export default function LoginScreen() {
   const { loginWithCredentials, lang, setLang, t } = useApp()
@@ -21,7 +14,6 @@ export default function LoginScreen() {
   const [showPass, setShowPass] = useState(false)
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
-  const [showDemo, setShowDemo] = useState(false)
 
   if (screen === 'register') {
     return (
@@ -49,13 +41,6 @@ export default function LoginScreen() {
         setPassword('')
       }
     }, 400)
-  }
-
-  const quickLogin = (user) => {
-    setUsername(user.username)
-    setPassword(user.password)
-    setError('')
-    setShowDemo(false)
   }
 
   return (
@@ -201,60 +186,6 @@ export default function LoginScreen() {
             : <><i className="ti ti-login"/>{t('دخول','Sign In')}</>
           }
         </button>
-
-        {/* Demo accounts */}
-        <div style={{borderRadius:12,border:'1px solid rgba(44,31,14,.1)',overflow:'hidden',marginBottom:16}}>
-          <button
-            onClick={()=>setShowDemo(v=>!v)}
-            style={{width:'100%',padding:'10px 14px',background:'rgba(44,31,14,.03)',
-              border:'none',cursor:'pointer',display:'flex',alignItems:'center',
-              justifyContent:'space-between',gap:8}}>
-            <span style={{display:'flex',alignItems:'center',gap:6,fontSize:12,color:'var(--c-stone)',fontWeight:600}}>
-              <i className="ti ti-users" style={{fontSize:14,color:'var(--c-water)'}}/>
-              {t('حسابات تجريبية للاختبار','Demo accounts for testing')}
-            </span>
-            <i className={`ti ti-chevron-${showDemo?'up':'down'}`} style={{fontSize:13,color:'var(--c-stone)'}}/>
-          </button>
-
-          {showDemo && (
-            <div style={{borderTop:'1px solid rgba(44,31,14,.08)'}}>
-              {USERS_MOCK.map(u => {
-                const rc = ROLE_COLOR[u.role] || ROLE_COLOR.beneficiary
-                return (
-                  <button key={u.id} onClick={()=>quickLogin(u)}
-                    style={{width:'100%',padding:'10px 14px',background:'none',
-                      border:'none',borderBottom:'1px solid rgba(44,31,14,.05)',
-                      cursor:'pointer',display:'flex',alignItems:'center',gap:10,
-                      textAlign:lang==='ar'?'right':'left'}}>
-                    <div style={{width:36,height:36,borderRadius:'50%',flexShrink:0,
-                      background:rc.bg,color:'#fff',display:'flex',alignItems:'center',
-                      justifyContent:'center',fontSize:13,fontWeight:700}}>
-                      {u.fullName.split(' ').slice(0,2).map(w=>w[0]).join('')}
-                    </div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:700,color:'var(--c-soil)',
-                        overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                        {u.fullName}
-                      </div>
-                      <div style={{fontSize:10,color:'var(--c-stone)',marginTop:1,
-                        display:'flex',alignItems:'center',gap:6}}>
-                        <code style={{background:'rgba(44,31,14,.06)',padding:'1px 5px',borderRadius:4,letterSpacing:'.03em'}}>
-                          {u.username}
-                        </code>
-                        <span style={{padding:'1px 6px',borderRadius:8,fontWeight:700,
-                          background:`${rc.bg}18`,color:rc.bg,border:`1px solid ${rc.bg}30`,fontSize:9}}>
-                          {lang==='ar'?rc.label:rc.labelEn}
-                        </span>
-                      </div>
-                    </div>
-                    <i className="ti ti-arrow-left" style={{fontSize:12,color:'var(--c-stone)',opacity:.4,
-                      transform:lang==='ar'?'none':'scaleX(-1)'}}/>
-                  </button>
-                )
-              })}
-            </div>
-          )}
-        </div>
 
         {/* Divider */}
         <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>

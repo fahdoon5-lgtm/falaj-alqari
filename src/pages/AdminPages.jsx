@@ -73,8 +73,174 @@ export function AdminHome({ onTab }) {
 }
 
 /* ═══════════ REGISTRATIONS ═══════════ */
+const ROLES_FOR_APPROVAL = [
+  { id:'beneficiary', ar:'مستفيد',  en:'Beneficiary', color:'#1A6B8A', icon:'ti-user'         },
+  { id:'admin',       ar:'أدمن',    en:'Admin',        color:'#2D6A2D', icon:'ti-shield-half'  },
+]
+
+function ApprovalModal({ reg, onConfirm, onClose, t, lang }) {
+  const holder = getHolder(reg.requestedHolderId)
+  const suggestedUsername = reg.fullName
+    .split(' ')
+    .filter(Boolean)
+    .map(w => w[0])
+    .join('')
+    .toLowerCase() + Math.floor(Math.random()*90+10)
+
+  const [role,     setRole]     = useState('beneficiary')
+  const [username, setUsername] = useState(suggestedUsername)
+  const [password, setPassword] = useState('')
+  const [showPass, setShowPass] = useState(false)
+  const [errors,   setErrors]   = useState({})
+
+  const validate = () => {
+    const e = {}
+    if (!username.trim() || username.trim().length < 3)
+      e.username = t('اسم المستخدم 3 أحرف على الأقل','Username must be at least 3 characters')
+    if (!password || password.length < 6)
+      e.password = t('كلمة المرور 6 خانات على الأقل','Password must be at least 6 characters')
+    setErrors(e)
+    return Object.keys(e).length === 0
+  }
+
+  const confirm = () => {
+    if (!validate()) return
+    onConfirm({ role, username: username.trim(), password })
+  }
+
+  return (
+    <div style={{position:'fixed',inset:0,zIndex:999,display:'flex',alignItems:'flex-end',justifyContent:'center',
+      background:'rgba(13,31,45,.55)',backdropFilter:'blur(4px)'}}>
+      <div style={{background:'#fff',borderRadius:'20px 20px 0 0',width:'100%',maxWidth:480,padding:24,
+        boxShadow:'0 -8px 40px rgba(13,31,45,.2)',maxHeight:'90vh',overflowY:'auto'}}>
+
+        {/* Header */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+          <div style={{fontSize:15,fontWeight:700,color:'var(--c-soil)',display:'flex',alignItems:'center',gap:8}}>
+            <i className="ti ti-user-check" style={{fontSize:18,color:'var(--c-water)'}}/>
+            {t('اعتماد التسجيل','Approve Registration')}
+          </div>
+          <button onClick={onClose} style={{border:'none',cursor:'pointer',
+            width:30,height:30,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',
+            background:'rgba(44,31,14,.07)',color:'var(--c-stone)'}}>
+            <i className="ti ti-x" style={{fontSize:14}}/>
+          </button>
+        </div>
+
+        {/* Reg summary */}
+        <div style={{background:'rgba(26,107,138,.06)',border:'1px solid rgba(26,107,138,.15)',
+          borderRadius:12,padding:'12px 14px',marginBottom:18}}>
+          <div style={{fontSize:13,fontWeight:700,color:'var(--c-soil)',marginBottom:6}}>{reg.fullName}</div>
+          <div style={{display:'flex',flexDirection:'column',gap:4}}>
+            {[
+              {icon:'ti-phone',      v: reg.phone                           },
+              {icon:'ti-droplet',    v: holder?.name                        },
+              {icon:'ti-users',      v: relTypeLabel(reg.relationType, lang) },
+            ].map((r,i) => r.v && (
+              <div key={i} style={{display:'flex',alignItems:'center',gap:6,fontSize:12,color:'var(--c-stone)'}}>
+                <i className={`ti ${r.icon}`} style={{fontSize:13,color:'var(--c-water)'}}/>
+                {r.v}
+              </div>
+            ))}
+          </div>
+          {reg.relationNote && (
+            <div style={{marginTop:8,fontSize:11,color:'var(--c-stone)',
+              background:'rgba(44,31,14,.04)',borderRadius:8,padding:'6px 10px'}}>
+              {reg.relationNote}
+            </div>
+          )}
+        </div>
+
+        {/* Role selector */}
+        <div className="form-group">
+          <label className="form-label">{t('تعيين الصلاحية','Assign Role')}</label>
+          <div style={{display:'flex',gap:8}}>
+            {ROLES_FOR_APPROVAL.map(r => (
+              <button key={r.id} onClick={()=>setRole(r.id)}
+                style={{flex:1,padding:'10px 8px',borderRadius:12,cursor:'pointer',
+                  border: role===r.id ? `2px solid ${r.color}` : '1.5px solid rgba(44,31,14,.12)',
+                  background: role===r.id ? `${r.color}12` : 'rgba(247,242,234,.5)',
+                  display:'flex',flexDirection:'column',alignItems:'center',gap:5,
+                  transition:'all .18s'}}>
+                <i className={`ti ${r.icon}`} style={{fontSize:20,color: role===r.id ? r.color : 'var(--c-stone)'}}/>
+                <span style={{fontSize:12,fontWeight: role===r.id ? 700 : 400,
+                  color: role===r.id ? r.color : 'var(--c-soil)'}}>
+                  {lang==='ar' ? r.ar : r.en}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Username */}
+        <div className="form-group">
+          <label className="form-label">{t('اسم المستخدم','Username')}</label>
+          <input className="form-input" value={username}
+            onChange={e=>{setUsername(e.target.value);setErrors(v=>({...v,username:''}))}}
+            placeholder={t('مثال: khalifa92','e.g. khalifa92')}
+            autoCapitalize="none" autoCorrect="off"/>
+          {errors.username && <div style={{fontSize:11,color:'var(--c-danger)',marginTop:4}}>{errors.username}</div>}
+          <div className="form-hint">{t('يُستخدم لتسجيل الدخول — أخبر المستخدم به','Used to sign in — share this with the user')}</div>
+        </div>
+
+        {/* Password */}
+        <div className="form-group">
+          <label className="form-label">{t('كلمة المرور المؤقتة','Temporary Password')}</label>
+          <div style={{position:'relative'}}>
+            <input className="form-input" type={showPass?'text':'password'}
+              value={password}
+              onChange={e=>{setPassword(e.target.value);setErrors(v=>({...v,password:''}))}}
+              placeholder={t('6 خانات على الأقل','At least 6 characters')}
+              style={{paddingLeft:40}}/>
+            <button onClick={()=>setShowPass(v=>!v)}
+              style={{position:'absolute',top:'50%',transform:'translateY(-50%)',
+                left:10,background:'none',border:'none',cursor:'pointer',
+                color:'var(--c-stone)',fontSize:16,padding:2}}>
+              <i className={`ti ti-eye${showPass?'-off':''}`}/>
+            </button>
+          </div>
+          {errors.password && <div style={{fontSize:11,color:'var(--c-danger)',marginTop:4}}>{errors.password}</div>}
+          <div className="form-hint">{t('سلّمها للمستخدم ليغيرها لاحقاً','Hand it to the user to change later')}</div>
+        </div>
+
+        {/* Credentials preview box */}
+        {username.trim() && password && (
+          <div style={{background:'rgba(45,106,45,.07)',border:'1px solid rgba(45,106,45,.2)',
+            borderRadius:12,padding:'12px 14px',marginBottom:16}}>
+            <div style={{fontSize:11,color:'#2D6A2D',fontWeight:700,marginBottom:8,display:'flex',alignItems:'center',gap:5}}>
+              <i className="ti ti-key" style={{fontSize:13}}/>
+              {t('بيانات الدخول (ستُمنح للمستخدم)','Login credentials (give to user)')}
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:6}}>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:12}}>
+                <span style={{color:'var(--c-stone)'}}>{t('اسم المستخدم:','Username:')}</span>
+                <code style={{color:'var(--c-soil)',fontWeight:700}}>{username.trim()}</code>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:12}}>
+                <span style={{color:'var(--c-stone)'}}>{t('كلمة المرور:','Password:')}</span>
+                <code style={{color:'var(--c-soil)',fontWeight:700}}>{password}</code>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div style={{display:'flex',gap:10}}>
+          <button className="btn btn-outline" style={{flex:1}} onClick={onClose}>
+            {t('إلغاء','Cancel')}
+          </button>
+          <button className="btn btn-palm" style={{flex:2}} onClick={confirm}>
+            <i className="ti ti-user-check"/>
+            {t('اعتماد وإنشاء الحساب','Approve & Create Account')}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function RegistrationsPage() {
   const { t, lang, pendingRegs, approveReg, rejectReg } = useApp()
+  const [approving, setApproving] = useState(null) // reg being approved
 
   if (pendingRegs.length === 0) return (
     <div className="page-content">
@@ -88,6 +254,15 @@ export function RegistrationsPage() {
 
   return (
     <div className="page-content">
+      {approving && (
+        <ApprovalModal
+          reg={approving}
+          t={t} lang={lang}
+          onClose={()=>setApproving(null)}
+          onConfirm={(data)=>{ approveReg(approving.id, data); setApproving(null) }}
+        />
+      )}
+
       <div className="section-lbl">{t('طلبات التسجيل المعلقة','Pending Registration Requests')} ({pendingRegs.length})</div>
       {pendingRegs.map(reg => {
         const holder = getHolder(reg.requestedHolderId)
@@ -128,8 +303,8 @@ export function RegistrationsPage() {
               )}
 
               <div className="btn-row">
-                <button className="btn btn-palm btn-sm" style={{flex:1}} onClick={()=>approveReg(reg.id)}>
-                  <i className="ti ti-check" aria-hidden="true"/>{t('قبول','Approve')}
+                <button className="btn btn-palm btn-sm" style={{flex:1}} onClick={()=>setApproving(reg)}>
+                  <i className="ti ti-check" aria-hidden="true"/>{t('قبول وتعيين الصلاحية','Approve & Assign')}
                 </button>
                 <button className="btn btn-danger btn-sm" style={{flex:1}} onClick={()=>rejectReg(reg.id)}>
                   <i className="ti ti-x" aria-hidden="true"/>{t('رفض','Reject')}
