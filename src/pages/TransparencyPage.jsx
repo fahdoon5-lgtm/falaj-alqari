@@ -3,7 +3,7 @@ import { useApp } from '../hooks/useAppState'
 import { useCycle } from '../hooks/useCycleSettings'
 import { AAD_DAYS, SHARES } from '../data/falajData'
 import { getHolder, holderColor, initials } from '../utils/helpers'
-import { getCurrentAadInfo, resolveShareTimes } from '../utils/cycleEngine'
+import { getCurrentAadInfo, resolveShareTimes, formatCountdown } from '../utils/cycleEngine'
 
 export default function TransparencyPage() {
   const { currentUser, t } = useApp()
@@ -18,18 +18,31 @@ export default function TransparencyPage() {
 
   const info = getCurrentAadInfo(cycleStart, now)
 
-  // Live current Aad and currently-active slot order
+  // Live current Aad and currently-active slot
   const CURRENT_AAD = info?.aadId ?? null
   let NOW_ORDER = null
+  let nowTimes = null
   if (info && CURRENT_AAD) {
     const aadShares = SHARES[CURRENT_AAD] || []
     for (const s of aadShares) {
       const times = resolveShareTimes(info.aadStartTime, s.startTime, s.endTime)
-      if (times.start <= now && now < times.end) { NOW_ORDER = s.order; break }
+      if (times.start <= now && now < times.end) { NOW_ORDER = s.order; nowTimes = times; break }
     }
   }
 
+  // صاحب الدور الآن
+  const nowShare  = NOW_ORDER != null ? (SHARES[CURRENT_AAD] || []).find(s => s.order === NOW_ORDER) : null
+  const nowHolder = nowShare ? getHolder(nowShare.holderId) : null
+  const nowColor  = nowShare ? holderColor(nowShare.holderId) : '#1A6B8A'
+  const nowIni    = nowHolder ? initials(nowHolder.name) : '?'
+  const isMyTurn  = nowShare?.holderId === currentUser?.holderId
+
   const [selectedAad, setSelectedAad] = useState(CURRENT_AAD || (AAD_DAYS[0]?.id ?? ''))
+
+  // تتبع الآد الجاري تلقائياً عند انتقاله (مرة كل 24 ساعة)
+  useEffect(() => {
+    if (CURRENT_AAD) setSelectedAad(CURRENT_AAD)
+  }, [CURRENT_AAD])
   const [query, setQuery] = useState('')
 
   const shares = SHARES[selectedAad] || []
@@ -58,6 +71,60 @@ export default function TransparencyPage() {
 
   return (
     <div className="page-content">
+
+      {/* ══ بانر صاحب الدور الحالي ══ */}
+      {cycleStart && (
+        <div style={{
+          background: 'linear-gradient(135deg,#0D1F2D,#1a3a4a,#0a2a1a)',
+          borderRadius: 20, padding: 18, color: '#fff',
+          boxShadow: '0 8px 32px rgba(13,31,45,.3)', position: 'relative', overflow: 'hidden',
+        }}>
+          <div style={{position:'absolute',top:-30,right:-30,width:110,height:110,borderRadius:'50%',background:'rgba(74,157,181,.1)',pointerEvents:'none'}}/>
+          <div style={{fontSize:11, color:'rgba(255,255,255,.45)', marginBottom:8, display:'flex', alignItems:'center', gap:6}}>
+            <span className="dot-live"/>
+            {t('الدور الجاري الآن','Currently on duty')}
+            {info && <span style={{marginRight:'auto', fontFamily:'IBM Plex Mono,monospace', fontSize:11, color:'rgba(255,255,255,.35)'}}>
+              {AAD_DAYS.find(d=>d.id===CURRENT_AAD)?.name}
+            </span>}
+          </div>
+
+          {nowHolder ? (
+            <div style={{display:'flex', alignItems:'center', gap:14, position:'relative', zIndex:1}}>
+              <div style={{
+                width:54, height:54, borderRadius:'50%', flexShrink:0,
+                background: isMyTurn ? 'linear-gradient(135deg,#1A6B8A,#4A9DB5)' : nowColor,
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontSize:18, fontWeight:700, color:'#fff',
+                border: isMyTurn ? '3px solid rgba(74,157,181,.6)' : '2px solid rgba(255,255,255,.2)',
+                boxShadow: isMyTurn ? '0 0 20px rgba(74,157,181,.5)' : 'none',
+              }}>{nowIni}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:16, fontWeight:700, lineHeight:1.2}}>
+                  {isMyTurn && <span style={{fontSize:11, color:'#4A9DB5', marginLeft:6}}>{t('(أنت)','(You)')}</span>}
+                  {nowHolder.name}
+                </div>
+                <div style={{fontSize:12, color:'rgba(255,255,255,.5)', marginTop:3, fontFamily:'IBM Plex Mono,monospace'}}>
+                  {nowShare.startTime} — {nowShare.endTime}
+                  <span style={{marginRight:10, color:'rgba(255,255,255,.3)'}}>·</span>
+                  {nowShare.athars} {t('أثر','athars')}
+                </div>
+              </div>
+              <div style={{textAlign:'center', flexShrink:0}}>
+                <div style={{fontSize:9, color:'rgba(255,255,255,.35)', marginBottom:3}}>{t('المتبقي','Remaining')}</div>
+                <div style={{fontSize:20, fontWeight:700, fontFamily:'IBM Plex Mono,monospace', color:'#4A9DB5', textShadow:'0 0 16px rgba(74,157,181,.4)'}}>
+                  {nowTimes ? formatCountdown(nowTimes.end - now) : '—'}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{fontSize:14, color:'rgba(255,255,255,.45)', textAlign:'center', padding:'8px 0', position:'relative', zIndex:1}}>
+              {cycleStart
+                ? t('لا يوجد دور جارٍ حالياً — ربما فترة انتقال','No active slot right now — transition period')
+                : t('لم يتم ضبط الدورة بعد','Cycle not configured yet')}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="info-box">
         <i className="ti ti-eye" style={{fontSize:16, flexShrink:0, marginTop:1}} aria-hidden="true"/>
