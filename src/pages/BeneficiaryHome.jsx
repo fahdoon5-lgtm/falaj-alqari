@@ -122,7 +122,7 @@ export default function BeneficiaryHome({ onTabChange, onPush }) {
           <div className="metric-badge">
             {activeTurn && !activeTurn.isNow && (
               <span className="badge badge-sun">
-                {activeTurn.realStart.toLocaleDateString(lang==='ar'?'ar-OM':'en-OM',{weekday:'short',day:'numeric',month:'short'})}
+                {activeTurn.realStart.toLocaleDateString(lang==='ar'?'ar-OM':'en-OM',{weekday:'short',day:'numeric',month:'short',timeZone:'Asia/Muscat'})}
               </span>
             )}
             {activeTurn?.isNow && <span className="badge badge-palm"><span className="dot-live" style={{marginLeft:4}}/>{t('الآن','Now')}</span>}

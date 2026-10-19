@@ -4,10 +4,22 @@ import { useCycle } from '../hooks/useCycleSettings'
 import { AAD_DAYS } from '../data/falajData'
 import { getCurrentAadInfo, formatCountdown, deriveCycleStart } from '../utils/cycleEngine'
 
-function pad(n) { return String(n).padStart(2,'0') }
+const MUSCAT = 'Asia/Muscat'
+
+// تحويل تاريخ → قيمة datetime-local بتوقيت عُمان (بغض النظر عن توقيت الجهاز)
 function toInputVal(d) {
   if (!d) return ''
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  return new Intl.DateTimeFormat('sv-SE', {
+    timeZone: MUSCAT,
+    year:'numeric', month:'2-digit', day:'2-digit',
+    hour:'2-digit', minute:'2-digit', hour12:false
+  }).format(d).replace(' ', 'T').slice(0, 16)
+}
+
+// تحويل قيمة datetime-local → Date، مع اعتبار الإدخال بتوقيت عُمان
+function parseMuscatInput(v) {
+  if (!v) return null
+  return new Date(v + ':00+04:00')  // UTC+4 = عُمان
 }
 
 export default function CycleSettingsPage() {
@@ -29,9 +41,9 @@ export default function CycleSettingsPage() {
     return () => clearInterval(timer)
   }, [])
 
-  // معاينة حقيقية من الإدخال
+  // معاينة حقيقية من الإدخال (نفسّر القيمة كتوقيت عُمان)
   const previewCycleStart = aadStartVal
-    ? deriveCycleStart(selectedAadId, new Date(aadStartVal))
+    ? deriveCycleStart(selectedAadId, parseMuscatInput(aadStartVal))
     : null
   const previewInfo = previewCycleStart
     ? getCurrentAadInfo(previewCycleStart, now)
@@ -41,7 +53,7 @@ export default function CycleSettingsPage() {
     if (!aadStartVal) return
     saveCycleSettings({
       currentAadId: selectedAadId,
-      aadStartedAt: new Date(aadStartVal),
+      aadStartedAt: parseMuscatInput(aadStartVal),  // دائماً UTC+4
       updatedBy: currentUser.fullName,
     })
     setSaved(true)
@@ -205,7 +217,7 @@ export default function CycleSettingsPage() {
             <div style={{marginTop:10,fontSize:11,color:'var(--c-stone)',textAlign:'center'}}>
               <i className="ti ti-clock" style={{fontSize:11,marginLeft:4}}/>
               {t('آخر تحديث:','Last updated:')} {settings.updatedBy}
-              {' — '}{settings.updatedAt?.toLocaleDateString('ar-OM',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}
+              {' — '}{settings.updatedAt?.toLocaleString('ar-OM',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:MUSCAT})}
             </div>
           )}
         </div>
@@ -240,8 +252,8 @@ export default function CycleSettingsPage() {
                     {isPast && <span style={{fontSize:11,color:'#1D9E75'}}>✓</span>}
                   </div>
                   <div style={{fontSize:11,color:'var(--c-stone)',marginTop:1,fontFamily:'IBM Plex Mono,monospace'}}>
-                    {start.toLocaleDateString('ar-OM',{weekday:'short',day:'numeric',month:'short'})}
-                    {' '}{pad(start.getHours())}:{pad(start.getMinutes())}
+                    {start.toLocaleDateString('ar-OM',{weekday:'short',day:'numeric',month:'short',timeZone:MUSCAT})}
+                    {' '}{start.toLocaleTimeString('ar-OM',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:MUSCAT})}
                   </div>
                 </div>
                 <span style={{fontSize:11,fontFamily:'IBM Plex Mono,monospace',color:isNow?'var(--c-water)':'var(--c-stone)',fontWeight:isNow?700:400}}>

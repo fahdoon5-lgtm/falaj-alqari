@@ -120,5 +120,5 @@ export function formatCountdown(ms) {
 export function formatDate(date, lang = 'ar') {
   if (!date) return '—'
   return date.toLocaleDateString(lang==='ar'?'ar-OM':'en-OM',
-    { weekday:'long', year:'numeric', month:'long', day:'numeric' })
+    { weekday:'long', year:'numeric', month:'long', day:'numeric', timeZone:'Asia/Muscat' })
 }

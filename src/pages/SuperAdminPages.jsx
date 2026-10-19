@@ -72,7 +72,7 @@ export function SuperAdminHome({ onTab }) {
               transition:'background .15s',position:'relative',zIndex:1}}>
             <i className="ti ti-settings" style={{fontSize:14}}/>
             {t('تعديل بداية الدورة','Edit cycle start')}
-            {settings?.updatedAt && <span style={{fontSize:10,opacity:.6,marginRight:6}}>({settings.updatedAt.toLocaleDateString('ar-OM',{day:'numeric',month:'short'})})</span>}
+            {settings?.updatedAt && <span style={{fontSize:10,opacity:.6,marginRight:6}}>({settings.updatedAt.toLocaleDateString('ar-OM',{day:'numeric',month:'short',timeZone:'Asia/Muscat'})})</span>}
           </button>
         </div>
       )}

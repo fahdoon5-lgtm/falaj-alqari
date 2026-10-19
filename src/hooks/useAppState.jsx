@@ -29,12 +29,12 @@ const nn = (n) => n ? ({
 
 const na = (l) => l ? ({
   actor: l.actor, action: l.action, entity: l.entity,
-  at: l.at || new Date(l.created_at).toLocaleString('ar-OM'),
+  at: l.at || new Date(l.created_at).toLocaleString('ar-OM',{timeZone:'Asia/Muscat'}),
 }) : null
 
 const nl = (l) => l ? ({
   userId: l.user_id, fullName: l.full_name, username: l.username,
-  role: l.role, at: l.at || new Date(l.created_at).toLocaleString('ar-OM'),
+  role: l.role, at: l.at || new Date(l.created_at).toLocaleString('ar-OM',{timeZone:'Asia/Muscat'}),
   ts: l.ts || new Date(l.created_at).getTime(),
 }) : null
 
@@ -183,7 +183,7 @@ export function AppProvider({ children }) {
   const t = (ar, en) => lang === 'ar' ? ar : en
 
   const _logAudit = async ({ actor, action, entity }) => {
-    const at = new Date().toLocaleString('ar-OM')
+    const at = new Date().toLocaleString('ar-OM',{timeZone:'Asia/Muscat'})
     const entry = { actor, action, entity, at }
     setAuditLogs(prev => [entry, ...prev])
     if (!OFFLINE)
@@ -191,7 +191,7 @@ export function AppProvider({ children }) {
   }
 
   const _recordLogin = async (user) => {
-    const at = new Date().toLocaleString('ar-OM')
+    const at = new Date().toLocaleString('ar-OM',{timeZone:'Asia/Muscat'})
     const ts = Date.now()
     const entry = { userId: user.id, fullName: user.fullName, username: user.username, role: user.role, at, ts }
     setLoginLogs(prev => [entry, ...prev])
@@ -386,7 +386,7 @@ export function AppProvider({ children }) {
       holder_id: holderId, current_name: currentName, new_name: newName,
       reason, note, requested_by: currentUser?.id,
       requested_by_name: currentUser?.fullName,
-      requested_at: new Date().toLocaleString('ar-OM'), status: 'pending',
+      requested_at: new Date().toLocaleString('ar-OM',{timeZone:'Asia/Muscat'}), status: 'pending',
     }
     if (!OFFLINE) {
       const { data, error } = await supabase.from('name_change_requests').insert(row).select().single()
@@ -400,7 +400,7 @@ export function AppProvider({ children }) {
   const approveNameChange = async (reqId) => {
     const req = nameChangeRequests.find(r => r.id === reqId)
     if (!req) return
-    const reviewedAt = new Date().toLocaleString('ar-OM')
+    const reviewedAt = new Date().toLocaleString('ar-OM',{timeZone:'Asia/Muscat'})
     setHolderNames(prev => ({ ...prev, [req.holderId]: req.newName }))
     setNameChangeRequests(prev => prev.map(r => r.id === reqId
       ? { ...r, status: 'approved', reviewedBy: currentUser?.fullName, reviewedAt } : r))
@@ -416,7 +416,7 @@ export function AppProvider({ children }) {
 
   const rejectNameChange = async (reqId) => {
     const req = nameChangeRequests.find(r => r.id === reqId)
-    const reviewedAt = new Date().toLocaleString('ar-OM')
+    const reviewedAt = new Date().toLocaleString('ar-OM',{timeZone:'Asia/Muscat'})
     setNameChangeRequests(prev => prev.map(r => r.id === reqId
       ? { ...r, status: 'rejected', reviewedBy: currentUser?.fullName, reviewedAt } : r))
     if (!OFFLINE)

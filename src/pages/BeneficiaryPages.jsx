@@ -20,7 +20,7 @@ export function MyCyclePage() {
 
   // Dynamic month badge from cycle start
   const monthLabel = info
-    ? new Date(info.aadStartTime).toLocaleDateString(lang === 'ar' ? 'ar-OM' : 'en-OM', { month: 'long', year: 'numeric' })
+    ? new Date(info.aadStartTime).toLocaleDateString(lang === 'ar' ? 'ar-OM' : 'en-OM', { month: 'long', year: 'numeric', timeZone: 'Asia/Muscat' })
     : t('—', '—')
 
   return (
