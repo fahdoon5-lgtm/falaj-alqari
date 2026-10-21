@@ -161,13 +161,14 @@ function SuperAdminApp() {
     <AppShell tabs={SUPER_TABS} homeRenderer={(push) => (
       <SuperAdminHome onTab={(page) => {
         const titles = {
-          registrations: t('طلبات التسجيل','Registrations'),
-          splits:        t('تقسيم الحصص','Share Splits'),
-          shareholders:  t('أسماء الملاك','Shareholders'),
-          broadcast:     t('إشعار جماعي','Broadcast'),
-          audit:         t('سجل التدقيق','Audit Log'),
-          cycle_settings:t('إعدادات الدورة','Cycle Settings'),
-          users_manage:  t('إدارة المستخدمين','Manage Users'),
+          registrations:    t('طلبات التسجيل','Registrations'),
+          splits:           t('تقسيم الحصص','Share Splits'),
+          shareholders:     t('أسماء الملاك','Shareholders'),
+          broadcast:        t('إشعار جماعي','Broadcast'),
+          audit:            t('سجل التدقيق','Audit Log'),
+          cycle_settings:   t('إعدادات الدورة','Cycle Settings'),
+          users_manage:     t('إدارة المستخدمين','Manage Users'),
+          agreements_admin: t('مقايضات الحصص','Share Agreements'),
         }
         push(page, titles[page] || page)
       }}/>

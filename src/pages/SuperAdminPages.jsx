@@ -5,7 +5,7 @@ import { AAD_DAYS, SHARE_HOLDERS } from '../data/falajData'
 import { getCurrentAadInfo, formatCountdown } from '../utils/cycleEngine'
 
 export function SuperAdminHome({ onTab }) {
-  const { t, pendingRegs, users } = useApp()
+  const { t, pendingRegs, users, pendingAgreementsForAdmin } = useApp()
   const { cycleStart, settings } = useCycle()
   const [now] = useState(new Date())
   const info = getCurrentAadInfo(cycleStart, now)
@@ -30,6 +30,13 @@ export function SuperAdminHome({ onTab }) {
       items: [
         { icon:'ti-users',        label:t('أسماء الملاك — تعديل مباشر','Shareholders — Direct Edit'), tab:'shareholders', color:'#1A6B8A' },
         { icon:'ti-git-branch',   label:t('تقسيم الحصص','Share Splits'),                              tab:'splits',       color:'#2D6A2D' },
+      ],
+    },
+    {
+      title: t('المقايضات','Agreements'),
+      color: '#1D9E75',
+      items: [
+        { icon:'ti-arrows-exchange', label:t('مقايضات الحصص','Share Agreements'), tab:'agreements_admin', color:'#1D9E75', badge: pendingAgreementsForAdmin.length || null },
       ],
     },
     {
