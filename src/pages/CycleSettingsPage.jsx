@@ -41,6 +41,16 @@ export default function CycleSettingsPage() {
     return () => clearInterval(timer)
   }, [])
 
+  // زامن الفورم مع الآد الحالي المحسوب (ليطابق ما يظهر في الهيدر)
+  useEffect(() => {
+    if (!cycleStart) return
+    const current = getCurrentAadInfo(cycleStart, new Date())
+    if (current?.aadId) {
+      setSelectedAadId(current.aadId)
+      setAadStartVal(toInputVal(current.aadStartTime))
+    }
+  }, [cycleStart])
+
   // معاينة حقيقية من الإدخال (نفسّر القيمة كتوقيت عُمان)
   const previewCycleStart = aadStartVal
     ? deriveCycleStart(selectedAadId, parseMuscatInput(aadStartVal))
