@@ -2,13 +2,16 @@ import { useState, useMemo } from 'react'
 import { useApp } from '../hooks/useAppState'
 import { SHARES, AAD_DAYS, SHARE_HOLDERS } from '../data/falajData'
 import { getHolder, holderColor, initials, relTypeLabel } from '../utils/helpers'
+import { getAgreementStatus } from '../utils/cycleEngine'
+import { useCycle } from '../hooks/useCycleSettings'
+import { getCurrentAadInfo } from '../utils/cycleEngine'
 
 // Computed once from domain data — stays correct if share data changes
 const ATHARS_PER_DAY = (SHARES[AAD_DAYS[0]?.id] || []).reduce((s, sh) => s + sh.athars, 0) || 96
 
 /* ═══════════ ADMIN HOME ═══════════ */
 export function AdminHome({ onTab }) {
-  const { t, pendingRegs } = useApp()
+  const { t, pendingRegs, pendingAgreementsForAdmin } = useApp()
 
   return (
     <div className="page-content">
@@ -46,6 +49,15 @@ export function AdminHome({ onTab }) {
                     `${pendingRegs.length} registration request(s) awaiting your approval.`)}</span>
         </div>
       )}
+      {pendingAgreementsForAdmin.length > 0 && (
+        <div className="warn-box" style={{cursor:'pointer',borderColor:'rgba(26,107,138,.25)',background:'rgba(26,107,138,.06)'}} onClick={()=>onTab('agreements')}>
+          <i className="ti ti-arrows-exchange" style={{fontSize:16, flexShrink:0, color:'var(--c-water)'}} aria-hidden="true"/>
+          <span style={{color:'var(--c-water)',fontWeight:600}}>
+            {t(`${pendingAgreementsForAdmin.length} طلب مقايضة بانتظار اعتمادك. اضغط للمراجعة.`,
+               `${pendingAgreementsForAdmin.length} agreement request(s) awaiting your approval.`)}
+          </span>
+        </div>
+      )}
 
       <div className="card">
         <div className="card-head">
@@ -53,10 +65,11 @@ export function AdminHome({ onTab }) {
         </div>
         <div className="card-body" style={{display:'flex', flexDirection:'column', gap:8}}>
           {[
-            { icon:'ti-user-check', label: t('مراجعة طلبات التسجيل','Review Registrations'), tab:'registrations', badge: pendingRegs.length > 0 ? pendingRegs.length : null },
-            { icon:'ti-droplet',    label: t('تعديل توزيعات الفلج','Edit Share Distributions'), tab:'shares' },
-            { icon:'ti-git-branch', label: t('تقسيم حصة الورثة','Split Heir Shares'), tab:'splits' },
-            { icon:'ti-users',      label: t('إدارة الملاك','Manage Shareholders'), tab:'shareholders' },
+            { icon:'ti-user-check',      label: t('مراجعة طلبات التسجيل','Review Registrations'), tab:'registrations', badge: pendingRegs.length > 0 ? pendingRegs.length : null },
+            { icon:'ti-arrows-exchange', label: t('مقايضات الحصص','Share Agreements'), tab:'agreements', badge: pendingAgreementsForAdmin.length > 0 ? pendingAgreementsForAdmin.length : null },
+            { icon:'ti-droplet',         label: t('تعديل توزيعات الفلج','Edit Share Distributions'), tab:'shares' },
+            { icon:'ti-git-branch',      label: t('تقسيم حصة الورثة','Split Heir Shares'), tab:'splits' },
+            { icon:'ti-users',           label: t('إدارة الملاك','Manage Shareholders'), tab:'shareholders' },
           ].map(item => (
             <button key={item.tab} className="btn btn-outline btn-full"
               style={{justifyContent:'flex-start', gap:10}} onClick={()=>onTab(item.tab)}>
@@ -609,6 +622,240 @@ export function ShareholdersPage() {
           })}
         </div>
       </div>
+    </div>
+  )
+}
+
+/* ═══════════ AGREEMENTS ADMIN ═══════════ */
+const AG_STATUS_LABELS = {
+  pending_b:     { ar:'بانتظار الطرف ب',    en:'Awaiting party B',  color:'#C8841A' },
+  pending_admin: { ar:'بانتظار الإدارة',    en:'Awaiting admin',    color:'#1A6B8A' },
+  active:        { ar:'فعّالة',              en:'Active',            color:'#1D9E75' },
+  completed:     { ar:'منتهية',             en:'Completed',         color:'#666'    },
+  cancelled:     { ar:'ملغاة',              en:'Cancelled',         color:'#c0392b' },
+}
+
+export function AgreementsAdminPage() {
+  const {
+    t, lang,
+    agreements, pendingAgreementsForAdmin,
+    approveAgreementByAdmin, rejectAgreementByAdmin, cancelAgreement,
+  } = useApp()
+  const { cycleStart } = useCycle()
+  const [filter, setFilter]    = useState('pending_admin')
+  const [expandId, setExpandId]= useState(null)
+  const [adminNotes, setAdminNotes] = useState('')
+  const [startCycle, setStartCycle] = useState('')
+  const [actingId, setActingId]    = useState(null)
+
+  const cycleInfo   = getCurrentAadInfo(cycleStart, new Date())
+  const cycleNumber = cycleInfo?.cycleNumber || 1
+
+  const filtered = agreements.filter(a => {
+    if (filter === 'pending_admin') return a.status === 'pending_admin'
+    if (filter === 'active')        return a.status === 'active'
+    if (filter === 'all')           return true
+    return true
+  })
+
+  const handleApprove = async (agId) => {
+    setActingId(agId)
+    await approveAgreementByAdmin(agId, {
+      startCycleNumber: startCycle ? parseInt(startCycle) : cycleNumber,
+      adminNotes: adminNotes || null,
+      currentCycleNumber: cycleNumber,
+    })
+    setActingId(null)
+    setExpandId(null)
+    setAdminNotes('')
+    setStartCycle('')
+  }
+
+  const handleReject = async (agId) => {
+    setActingId(agId)
+    await rejectAgreementByAdmin(agId, adminNotes || null)
+    setActingId(null)
+    setExpandId(null)
+    setAdminNotes('')
+  }
+
+  return (
+    <div className="page-content">
+
+      {/* Summary */}
+      <div className="metrics-grid">
+        <div className="metric-card">
+          <div className="metric-val" style={{color:'#C8841A'}}>{pendingAgreementsForAdmin.length}</div>
+          <div className="metric-lbl">{t('بانتظار الاعتماد','Awaiting approval')}</div>
+          <div className="metric-badge">
+            {pendingAgreementsForAdmin.length > 0
+              ? <span className="badge badge-sun">{t('تحتاج مراجعة','Needs review')}</span>
+              : <span className="badge badge-palm">{t('لا شيء','All clear')}</span>}
+          </div>
+        </div>
+        <div className="metric-card">
+          <div className="metric-val" style={{color:'#1D9E75'}}>{agreements.filter(a=>a.status==='active').length}</div>
+          <div className="metric-lbl">{t('مقايضات فعّالة','Active agreements')}</div>
+          <div className="metric-badge"><span className="badge badge-palm">{t('جارية','Running')}</span></div>
+        </div>
+        <div className="metric-card">
+          <div className="metric-val">{agreements.length}</div>
+          <div className="metric-lbl">{t('الإجمالي','Total')}</div>
+          <div className="metric-badge"><span className="badge badge-stone">{t('كل الاتفاقيات','All agreements')}</span></div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div style={{display:'flex',gap:6}}>
+        {[
+          { id:'pending_admin', ar:'بانتظار الإدارة', en:'Pending Approval', count: pendingAgreementsForAdmin.length },
+          { id:'active',        ar:'فعّالة',          en:'Active'           },
+          { id:'all',           ar:'الكل',            en:'All'              },
+        ].map(f => (
+          <button key={f.id} onClick={() => setFilter(f.id)}
+            style={{
+              flex:1, padding:'6px 4px', borderRadius:10, fontSize:11, fontWeight:600,
+              border: filter===f.id ? '1.5px solid var(--c-water)' : '1px solid rgba(44,31,14,.1)',
+              background: filter===f.id ? 'rgba(26,107,138,.1)' : 'rgba(255,255,255,.8)',
+              color: filter===f.id ? 'var(--c-water)' : 'var(--c-stone)', cursor:'pointer',
+            }}>
+            {t(f.ar, f.en)}
+            {f.count > 0 && (
+              <span style={{marginRight:4,background:'#C8841A',color:'#fff',borderRadius:'50%',width:15,height:15,display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:9}}>
+                {f.count}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* List */}
+      {filtered.length === 0 ? (
+        <div style={{textAlign:'center',padding:'32px 16px',color:'var(--c-stone)'}}>
+          <i className="ti ti-arrows-exchange" style={{fontSize:32,display:'block',marginBottom:8,opacity:.3}}/>
+          <div style={{fontSize:13}}>{t('لا توجد مقايضات في هذا التصنيف.','No agreements in this category.')}</div>
+        </div>
+      ) : (
+        filtered.map(ag => {
+          const holderA = getHolder(ag.holderAId)
+          const holderB = ag.holderBId ? getHolder(ag.holderBId) : null
+          const aad     = AAD_DAYS.find(d => d.id === ag.aadId)
+          const sl      = AG_STATUS_LABELS[ag.status]
+          const isOpen  = expandId === ag.id
+          const agPhase = ag.status === 'active' ? getAgreementStatus({
+            status: ag.status,
+            start_cycle_number: ag.startCycleNumber,
+            accumulation_cycles: ag.accumulationCycles,
+            is_recurring: ag.isRecurring,
+            athars_per_cycle: ag.atharsPerCycle,
+          }, cycleNumber) : null
+
+          return (
+            <div key={ag.id} style={{background:'#fff',borderRadius:14,border:`1px solid ${sl?.color}33`,overflow:'hidden',boxShadow:'0 2px 10px rgba(44,31,14,.05)'}}>
+              {/* Row */}
+              <div style={{padding:'12px 14px',display:'flex',gap:10,alignItems:'center',cursor:'pointer'}}
+                onClick={() => setExpandId(isOpen ? null : ag.id)}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:12,fontWeight:700,color:'var(--c-soil)'}}>
+                    {holderA.name}
+                    {holderB && <span style={{color:'var(--c-stone)',fontWeight:400}}> ⇄ {holderB.name}</span>}
+                  </div>
+                  <div style={{fontSize:11,color:'var(--c-stone)',marginTop:2}}>
+                    {aad?.name} · {ag.atharsPerCycle} {t('أثر ×','athr ×')} {ag.accumulationCycles} {t('دورات','cycles')}
+                    {' → '}<strong>{ag.atharsPerCycle * ag.accumulationCycles}</strong> {t('أثر','athr')}
+                  </div>
+                  {agPhase && (
+                    <div style={{fontSize:10,marginTop:3,color: agPhase.phase==='payout'?'#1D9E75':'#C8841A',fontWeight:600}}>
+                      {agPhase.phase==='payout'
+                        ? t(`دورة الصرف — ${agPhase.payoutAthars} أثر`, `Payout — ${agPhase.payoutAthars} athars`)
+                        : t(`تجميع ${agPhase.cycleInPeriod}/${agPhase.totalCycles}`, `Accumulating ${agPhase.cycleInPeriod}/${agPhase.totalCycles}`)}
+                    </div>
+                  )}
+                </div>
+                <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4}}>
+                  <span style={{fontSize:10,padding:'2px 8px',borderRadius:12,background:sl?.color+'1a',color:sl?.color,fontWeight:600}}>
+                    {lang==='ar'?sl?.ar:sl?.en}
+                  </span>
+                  <i className={`ti ${isOpen?'ti-chevron-up':'ti-chevron-down'}`} style={{fontSize:12,color:'var(--c-stone)'}}/>
+                </div>
+              </div>
+
+              {/* Expand */}
+              {isOpen && (
+                <div style={{borderTop:'1px solid rgba(44,31,14,.07)',padding:'12px 14px',background:'rgba(44,31,14,.02)'}}>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12}}>
+                    {[
+                      { label:t('طلب من','Requested by'), val: ag.requestedBy || '—' },
+                      { label:t('الطرف أ','Party A'),    val: holderA.name },
+                      { label:t('الطرف ب','Party B'),    val: holderB?.name || t('لا يوجد','None') },
+                      { label:t('الآد','Aad'),            val: aad?.name || ag.aadId },
+                      { label:t('الترتيب','Order'),       val: ag.shareOrder },
+                      { label:t('أثر/دورة','Athr/cycle'), val: ag.atharsPerCycle },
+                      { label:t('عدد الدورات','Cycles'),  val: ag.accumulationCycles },
+                      { label:t('متكررة','Recurring'),    val: ag.isRecurring ? t('نعم','Yes') : t('لا','No') },
+                      { label:t('بداية من الدورة','Start at cycle'), val: ag.startCycleNumber || t('غير محدد','Not set') },
+                    ].map(({ label, val }) => (
+                      <div key={label}>
+                        <div style={{fontSize:10,color:'var(--c-stone)'}}>{label}</div>
+                        <div style={{fontSize:12,fontWeight:600,color:'var(--c-soil)'}}>{val}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {ag.notes && (
+                    <div style={{fontSize:11,color:'var(--c-stone)',marginBottom:10}}>
+                      <i className="ti ti-notes" style={{fontSize:11,marginLeft:4}}/>
+                      {ag.notes}
+                    </div>
+                  )}
+
+                  {ag.status === 'pending_admin' && (
+                    <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                      <div className="form-group" style={{marginBottom:0}}>
+                        <label className="form-label" style={{fontSize:11}}>
+                          {t('تبدأ من الدورة رقم (اتركه فارغاً للدورة الحالية)','Start from cycle # (blank = current cycle)')}
+                        </label>
+                        <input type="number" className="form-input" style={{fontSize:12}}
+                          placeholder={String(cycleNumber)}
+                          value={startCycle}
+                          onChange={e => setStartCycle(e.target.value)}
+                        />
+                      </div>
+                      <div className="form-group" style={{marginBottom:0}}>
+                        <label className="form-label" style={{fontSize:11}}>{t('ملاحظة للمستفيد (اختياري)','Note for beneficiary (optional)')}</label>
+                        <textarea className="form-input" rows={2} style={{fontSize:12,resize:'vertical'}}
+                          value={adminNotes} onChange={e => setAdminNotes(e.target.value)}
+                          placeholder={t('ملاحظات الإدارة…','Admin notes…')}/>
+                      </div>
+                      <div className="btn-row" style={{marginTop:0}}>
+                        <button className="btn btn-primary" style={{flex:1,fontSize:12}}
+                          onClick={() => handleApprove(ag.id)}
+                          disabled={actingId === ag.id}>
+                          <i className="ti ti-check"/>
+                          {actingId===ag.id ? t('جاري…','Processing…') : t('اعتماد','Approve')}
+                        </button>
+                        <button className="btn"
+                          style={{flex:1,fontSize:12,background:'rgba(192,57,43,.07)',color:'#c0392b',border:'1px solid rgba(192,57,43,.2)'}}
+                          onClick={() => handleReject(ag.id)}
+                          disabled={actingId === ag.id}>
+                          <i className="ti ti-x"/>{t('رفض','Reject')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {ag.status === 'active' && (
+                    <button className="btn"
+                      style={{fontSize:11,color:'#c0392b',background:'rgba(192,57,43,.05)',border:'1px solid rgba(192,57,43,.15)'}}
+                      onClick={() => cancelAgreement(ag.id)}>
+                      <i className="ti ti-x"/>{t('إلغاء الاتفاقية','Cancel agreement')}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })
+      )}
     </div>
   )
 }

@@ -109,6 +109,45 @@ export function getMyTurns(holderId, cycleStart, now = new Date()) {
   }).sort((a, b) => a.realStart - b.realStart)
 }
 
+/**
+ * حالة اتفاقية التجميع بناءً على رقم الدورة الحالية
+ *
+ * - 'accumulating' : هذه دورة تجميع (الطرف أ يتنازل، الطرف ب يستفيد)
+ * - 'payout'       : هذه دورة الصرف (الطرف أ يحصل على الحصة المجمعة)
+ * - null           : الاتفاقية غير فعالة
+ *
+ * مثال: accumulation_cycles=3, start_cycle_number=5
+ *   دورة 5 → accumulating (1/3)
+ *   دورة 6 → accumulating (2/3)
+ *   دورة 7 → payout       (3/3) ← هنا يحصل الطرف أ على 3×athars
+ *   دورة 8 (is_recurring) → accumulating (1/3) من جديد
+ */
+export function getAgreementStatus(agreement, currentCycleNumber) {
+  const { status, start_cycle_number, accumulation_cycles, is_recurring } = agreement
+  if (status !== 'active') return null
+  if (!start_cycle_number || !currentCycleNumber) return null
+
+  const elapsed = currentCycleNumber - start_cycle_number
+  if (elapsed < 0) return null  // الاتفاقية لم تبدأ بعد
+
+  const periodLen = accumulation_cycles
+  const posInPeriod = elapsed % periodLen   // 0-based داخل الفترة
+
+  // إذا انتهت الفترة ولم تكن متكررة
+  if (!is_recurring && elapsed >= periodLen) return null
+
+  const cycleInPeriod = posInPeriod + 1     // 1-based
+  const isPayout = cycleInPeriod === periodLen
+
+  return {
+    phase: isPayout ? 'payout' : 'accumulating',
+    cycleInPeriod,
+    totalCycles: periodLen,
+    payoutAthars: agreement.athars_per_cycle * periodLen,
+    periodNumber: Math.floor(elapsed / periodLen) + 1,
+  }
+}
+
 /** تحويل ميلي ثانية لـ HH:MM:SS */
 export function formatCountdown(ms) {
   if (ms <= 0) return '00:00:00'

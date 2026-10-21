@@ -15,6 +15,26 @@ const nu = (u) => u ? ({
   holderId: u.holder_id, relationType: u.relation_type, avatar: u.avatar,
 }) : null
 
+const nag = (a) => a ? ({
+  id: a.id,
+  holderAId: a.holder_a_id, userAId: a.user_a_id,
+  holderBId: a.holder_b_id, userBId: a.user_b_id,
+  aadId: a.aad_id, shareOrder: a.share_order,
+  atharsPerCycle: Number(a.athars_per_cycle),
+  accumulationCycles: a.accumulation_cycles,
+  isRecurring: a.is_recurring,
+  startCycleNumber: a.start_cycle_number,
+  status: a.status,
+  approvedByAAt: a.approved_by_a_at,
+  approvedByBAt: a.approved_by_b_at,
+  approvedByAdminAt: a.approved_by_admin_at,
+  adminNotes: a.admin_notes,
+  requestedBy: a.requested_by,
+  notes: a.notes,
+  createdAt: a.created_at,
+  updatedAt: a.updated_at,
+}) : null
+
 const nr = (r) => r ? ({
   id: r.id, fullName: r.full_name, phone: r.phone,
   requestedHolderId: r.requested_holder_id, relationType: r.relation_type,
@@ -70,6 +90,7 @@ export function AppProvider({ children }) {
   const [loginLogs,   setLoginLogs]   = useState([])
   const [holderNames, setHolderNames] = useState({})
   const [nameChangeRequests, setNameChangeRequests] = useState([])
+  const [agreements,  setAgreements]  = useState([])
 
   // ── Bootstrap ──────────────────────────────────────────────────────────────
   useEffect(() => { OFFLINE ? bootOffline() : bootOnline() }, [])
@@ -96,6 +117,7 @@ export function AppProvider({ children }) {
       const [
         { data: uData }, { data: rData }, { data: aData },
         { data: lData }, { data: hData }, { data: ncrData },
+        { data: agData },
       ] = await Promise.all([
         supabase.from('app_users').select('*').order('created_at'),
         supabase.from('pending_registrations').select('*').order('submitted_at', { ascending: false }),
@@ -103,6 +125,7 @@ export function AppProvider({ children }) {
         supabase.from('login_logs').select('*').order('created_at', { ascending: false }).limit(300),
         supabase.from('holder_name_overrides').select('*'),
         supabase.from('name_change_requests').select('*').order('created_at', { ascending: false }),
+        supabase.from('share_agreements').select('*').order('created_at', { ascending: false }),
       ])
 
       setUsers((uData || []).map(nu))
@@ -113,6 +136,7 @@ export function AppProvider({ children }) {
       ;(hData || []).forEach(h => { namesObj[h.holder_id] = h.name })
       setHolderNames(namesObj)
       setNameChangeRequests((ncrData || []).map(ncr))
+      setAgreements((agData || []).map(nag))
 
       // 3. Load notifications for this user
       if (me) await _loadNotifs(me.id)
@@ -178,6 +202,26 @@ export function AppProvider({ children }) {
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [currentUser?.id])
+
+  // ── Real-time: agreements ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (OFFLINE) return
+    const ch = supabase
+      .channel('share_agreements_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'share_agreements' },
+        ({ eventType, new: row, old: oldRow }) => {
+          if (eventType === 'INSERT') {
+            setAgreements(prev => prev.find(a => a.id === row.id) ? prev : [nag(row), ...prev])
+          } else if (eventType === 'UPDATE') {
+            setAgreements(prev => prev.map(a => a.id === row.id ? nag(row) : a))
+          } else if (eventType === 'DELETE') {
+            setAgreements(prev => prev.filter(a => a.id !== oldRow.id))
+          }
+        }
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [])
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const t = (ar, en) => lang === 'ar' ? ar : en
@@ -426,9 +470,102 @@ export function AppProvider({ children }) {
     if (req) _logAudit({ actor: currentUser?.fullName || '—', action: 'رفض تعديل اسم', entity: req.currentName })
   }
 
+  // ── Agreements (مقايضات) ──────────────────────────────────────────────────
+  const requestAgreement = async ({
+    holderAId, userAId, holderBId, userBId,
+    aadId, shareOrder, atharsPerCycle,
+    accumulationCycles, isRecurring, notes,
+  }) => {
+    const row = {
+      holder_a_id: holderAId, user_a_id: userAId || null,
+      holder_b_id: holderBId || null, user_b_id: userBId || null,
+      aad_id: aadId, share_order: shareOrder,
+      athars_per_cycle: atharsPerCycle,
+      accumulation_cycles: accumulationCycles,
+      is_recurring: isRecurring,
+      status: holderBId ? 'pending_b' : 'pending_admin',
+      approved_by_a_at: new Date().toISOString(),
+      requested_by: currentUser?.fullName,
+      notes: notes || null,
+    }
+    if (!OFFLINE) {
+      const { data, error } = await supabase.from('share_agreements').insert(row).select().single()
+      if (error) return { ok: false, error }
+      setAgreements(prev => [nag(data), ...prev])
+    } else {
+      const local = { ...row, id: `ag_${Date.now()}`, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+      setAgreements(prev => [nag(local), ...prev])
+    }
+    _logAudit({ actor: currentUser?.fullName || '—', action: 'طلب مقايضة', entity: `${holderAId} · ${aadId}` })
+    return { ok: true }
+  }
+
+  const approveAgreementByB = async (agreementId) => {
+    const now = new Date().toISOString()
+    setAgreements(prev => prev.map(a => a.id === agreementId
+      ? { ...a, status: 'pending_admin', approvedByBAt: now } : a))
+    if (!OFFLINE)
+      await supabase.from('share_agreements')
+        .update({ status: 'pending_admin', approved_by_b_at: now })
+        .eq('id', agreementId)
+    _logAudit({ actor: currentUser?.fullName || '—', action: 'موافقة الطرف ب على مقايضة', entity: agreementId })
+  }
+
+  const rejectAgreementByB = async (agreementId) => {
+    setAgreements(prev => prev.map(a => a.id === agreementId
+      ? { ...a, status: 'cancelled' } : a))
+    if (!OFFLINE)
+      await supabase.from('share_agreements')
+        .update({ status: 'cancelled' })
+        .eq('id', agreementId)
+    _logAudit({ actor: currentUser?.fullName || '—', action: 'رفض الطرف ب للمقايضة', entity: agreementId })
+  }
+
+  const approveAgreementByAdmin = async (agreementId, { startCycleNumber, adminNotes, currentCycleNumber } = {}) => {
+    const now = new Date().toISOString()
+    const updateData = {
+      status: 'active',
+      approved_by_admin_at: now,
+      start_cycle_number: startCycleNumber || currentCycleNumber || 1,
+      admin_notes: adminNotes || null,
+    }
+    setAgreements(prev => prev.map(a => a.id === agreementId
+      ? { ...a, ...nag({ ...a, ...Object.fromEntries(Object.entries(updateData).map(([k,v]) => [k,v])), id: agreementId, holder_a_id: a.holderAId, holder_b_id: a.holderBId, aad_id: a.aadId, share_order: a.shareOrder, athars_per_cycle: a.atharsPerCycle, accumulation_cycles: a.accumulationCycles, is_recurring: a.isRecurring } ) } : a))
+    if (!OFFLINE)
+      await supabase.from('share_agreements').update(updateData).eq('id', agreementId)
+    _logAudit({ actor: currentUser?.fullName || '—', action: 'اعتماد مقايضة', entity: agreementId })
+  }
+
+  const rejectAgreementByAdmin = async (agreementId, adminNotes) => {
+    setAgreements(prev => prev.map(a => a.id === agreementId
+      ? { ...a, status: 'cancelled', adminNotes } : a))
+    if (!OFFLINE)
+      await supabase.from('share_agreements')
+        .update({ status: 'cancelled', admin_notes: adminNotes || null })
+        .eq('id', agreementId)
+    _logAudit({ actor: currentUser?.fullName || '—', action: 'رفض مقايضة (أدمن)', entity: agreementId })
+  }
+
+  const cancelAgreement = async (agreementId) => {
+    setAgreements(prev => prev.map(a => a.id === agreementId
+      ? { ...a, status: 'cancelled' } : a))
+    if (!OFFLINE)
+      await supabase.from('share_agreements')
+        .update({ status: 'cancelled' })
+        .eq('id', agreementId)
+    _logAudit({ actor: currentUser?.fullName || '—', action: 'إلغاء مقايضة', entity: agreementId })
+  }
+
   // ── Derived ────────────────────────────────────────────────────────────────
   const pendingNameChanges = nameChangeRequests.filter(r => r.status === 'pending')
   const unreadCount = notifications.filter(n => !n.isRead).length
+  const pendingAgreementsForMe = agreements.filter(a => {
+    if (!currentUser?.holderId) return false
+    // أنا الطرف ب وبانتظار موافقتي
+    if (a.status === 'pending_b' && a.holderBId === currentUser.holderId) return true
+    return false
+  })
+  const pendingAgreementsForAdmin = agreements.filter(a => a.status === 'pending_admin')
 
   return (
     <AppCtx.Provider value={{
@@ -445,6 +582,9 @@ export function AppProvider({ children }) {
       holderNames, directEditName,
       nameChangeRequests, pendingNameChanges,
       requestNameChange, approveNameChange, rejectNameChange,
+      agreements, pendingAgreementsForMe, pendingAgreementsForAdmin,
+      requestAgreement, approveAgreementByB, rejectAgreementByB,
+      approveAgreementByAdmin, rejectAgreementByAdmin, cancelAgreement,
     }}>
       {children}
     </AppCtx.Provider>

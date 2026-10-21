@@ -8,16 +8,17 @@ import NotificationsPanel from './components/NotificationsPanel'
 import BeneficiaryHome from './pages/BeneficiaryHome'
 import TransparencyPage from './pages/TransparencyPage'
 import { MyCyclePage, FarmsPage, NotesPage } from './pages/BeneficiaryPages'
-import { AdminHome, RegistrationsPage, SplitsPage, ShareholdersPage, LoginLogsPage } from './pages/AdminPages'
+import { AdminHome, RegistrationsPage, SplitsPage, ShareholdersPage, LoginLogsPage, AgreementsAdminPage } from './pages/AdminPages'
+import AgreementsPage from './pages/AgreementsPage'
 import { SuperAdminHome, BroadcastPage, AuditPage, UsersManagePage } from './pages/SuperAdminPages'
 import CycleSettingsPage from './pages/CycleSettingsPage'
 
 const BENEFICIARY_TABS = [
-  { id:'home',         icon:'ti-home',     ar:'لوحتي',     en:'Home'     },
-  { id:'transparency', icon:'ti-eye',      ar:'حصص الفلج', en:'Shares'   },
-  { id:'cycle',        icon:'ti-calendar', ar:'دورتي',     en:'My Cycle' },
-  { id:'farms',        icon:'ti-plant-2',  ar:'مزارعي',    en:'Farms'    },
-  { id:'notes',        icon:'ti-notes',    ar:'ملاحظاتي',  en:'Notes'    },
+  { id:'home',         icon:'ti-home',             ar:'لوحتي',     en:'Home'       },
+  { id:'transparency', icon:'ti-eye',              ar:'حصص الفلج', en:'Shares'     },
+  { id:'cycle',        icon:'ti-calendar',         ar:'دورتي',     en:'My Cycle'   },
+  { id:'agreements',   icon:'ti-arrows-exchange',  ar:'مقايضاتي',  en:'Agreements' },
+  { id:'notes',        icon:'ti-notes',            ar:'ملاحظاتي',  en:'Notes'      },
 ]
 const ADMIN_TABS = [
   { id:'home',         icon:'ti-layout-dashboard', ar:'الرئيسية',  en:'Dashboard'    },
@@ -45,7 +46,8 @@ function renderPage(tab, page) {
       case 'audit':          return <AuditPage/>
       case 'login_logs':     return <LoginLogsPage/>
       case 'users_manage':   return <UsersManagePage/>
-      case 'cycle_settings': return <CycleSettingsPage/>
+      case 'cycle_settings':    return <CycleSettingsPage/>
+      case 'agreements_admin':  return <AgreementsAdminPage/>
       default: break
     }
   }
@@ -54,6 +56,7 @@ function renderPage(tab, page) {
     case 'cycle':          return <MyCyclePage/>
     case 'farms':          return <FarmsPage/>
     case 'notes':          return <NotesPage/>
+    case 'agreements':     return <AgreementsPage/>
     case 'registrations':  return <RegistrationsPage/>
     case 'splits':         return <SplitsPage/>
     case 'shareholders':   return <ShareholdersPage/>
@@ -72,10 +75,12 @@ function AppShell({ tabs, homeRenderer }) {
 
   const TAB_TITLES = {
     home:'الرئيسية', transparency:'حصص الفلج', cycle:'دورتي',
-    farms:'مزارعي', notes:'ملاحظاتي', registrations:'طلبات التسجيل',
-    splits:'تقسيم الحصص', shareholders:'الملاك', audit:'سجل التدقيق',
+    farms:'مزارعي', notes:'ملاحظاتي', agreements:'مقايضاتي',
+    registrations:'طلبات التسجيل', splits:'تقسيم الحصص',
+    shareholders:'الملاك', audit:'سجل التدقيق',
     broadcast:'إشعار جماعي', cycle_admin:'إعدادات الدورة', cycle_settings:'إعدادات الدورة',
     users_manage:'إدارة المستخدمين', login_logs:'السجلات',
+    agreements_admin:'مقايضات الحصص',
   }
 
   const page    = current?.page || null
@@ -138,10 +143,11 @@ function AdminApp() {
     <AppShell tabs={ADMIN_TABS} homeRenderer={(push) => (
       <AdminHome onTab={(page) => {
         const titles = {
-          registrations: t('طلبات التسجيل','Registrations'),
-          splits:        t('تقسيم الحصص','Share Splits'),
-          shareholders:  t('إدارة الملاك','Shareholders'),
-          cycle_settings:t('إعدادات الدورة','Cycle Settings'),
+          registrations:    t('طلبات التسجيل','Registrations'),
+          splits:           t('تقسيم الحصص','Share Splits'),
+          shareholders:     t('إدارة الملاك','Shareholders'),
+          cycle_settings:   t('إعدادات الدورة','Cycle Settings'),
+          agreements_admin: t('مقايضات الحصص','Share Agreements'),
         }
         push(page, titles[page] || page)
       }}/>
