@@ -68,7 +68,7 @@ function renderPage(tab, page) {
 }
 
 function AppShell({ tabs, homeRenderer }) {
-  const { lang } = useApp()
+  const { lang, t } = useApp()
   const { activeTab, goTab, push, current, canGoBack, stackDepth } = useNav()
   const [showNotif, setShowNotif] = useState(false)
 
