@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useApp } from '../hooks/useAppState'
 import { useCycle } from '../hooks/useCycleSettings'
 import { AAD_DAYS, SHARES, SHARE_HOLDERS } from '../data/falajData'
@@ -15,7 +15,11 @@ const BEN_REASONS = [
 export function MyCyclePage() {
   const { currentUser, t, lang } = useApp()
   const { cycleStart } = useCycle()
-  const [now] = useState(() => new Date())
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
   const info = getCurrentAadInfo(cycleStart, now)
 
   // Dynamic month badge from cycle start
@@ -27,8 +31,16 @@ export function MyCyclePage() {
     <div className="page-content">
       <div className="card">
         <div className="card-head">
-          <span className="card-title">{t('دورتي الكاملة — 12 يوماً','My Full Cycle — 12 Days')}</span>
-          <span className="badge badge-water">{monthLabel}</span>
+          <div>
+            <span className="card-title">{t('دورتي الكاملة — 12 يوماً','My Full Cycle — 12 Days')}</span>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:3}}>
+            <span className="badge badge-water">{monthLabel}</span>
+            <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:10,color:'var(--c-stone)',display:'flex',alignItems:'center',gap:3}}>
+              <i className="ti ti-clock" style={{fontSize:10}}/>
+              {now.toLocaleTimeString('ar-OM',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Asia/Muscat'})}
+            </span>
+          </div>
         </div>
         <div className="card-body">
           <div className="timeline">
@@ -53,7 +65,7 @@ export function MyCyclePage() {
                       {isCurrent && <span style={{fontSize:11, color:'var(--c-water)', marginRight:6}}>← {t('دوري','My turn')}</span>}
                     </div>
                     <div className="tl-time">
-                      {isPast ? t('مضى','Passed') : isCurrent ? t('غداً','Tomorrow') : t('لاحقاً','Later')}
+                      {isPast ? t('مضى','Passed') : isCurrent ? t('اليوم','Today') : t('لاحقاً','Later')}
                     </div>
                     {hasShare ? sh.map((s, j) => (
                       <span key={j} className={`tl-pill${isCurrent?' water':''}`}>

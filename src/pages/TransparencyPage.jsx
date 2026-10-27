@@ -86,6 +86,10 @@ export default function TransparencyPage() {
             {info && <span style={{marginRight:'auto', fontFamily:'IBM Plex Mono,monospace', fontSize:11, color:'rgba(255,255,255,.35)'}}>
               {AAD_DAYS.find(d=>d.id===CURRENT_AAD)?.name}
             </span>}
+            <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'rgba(255,255,255,.55)',display:'flex',alignItems:'center',gap:3}}>
+              <i className="ti ti-clock" style={{fontSize:10}}/>
+              {now.toLocaleTimeString('ar-OM',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Asia/Muscat'})}
+            </span>
           </div>
 
           {nowHolder ? (
@@ -110,10 +114,11 @@ export default function TransparencyPage() {
                 </div>
               </div>
               <div style={{textAlign:'center', flexShrink:0}}>
-                <div style={{fontSize:9, color:'rgba(255,255,255,.35)', marginBottom:3}}>{t('المتبقي','Remaining')}</div>
+                <div style={{fontSize:11, color:'rgba(255,255,255,.7)', marginBottom:3, fontWeight:600}}>{t('المتبقي','Remaining')}</div>
                 <div style={{fontSize:20, fontWeight:700, fontFamily:'IBM Plex Mono,monospace', color:'#4A9DB5', textShadow:'0 0 16px rgba(74,157,181,.4)'}}>
                   {nowTimes ? formatCountdown(nowTimes.end - now) : '—'}
                 </div>
+                <div style={{fontSize:9, color:'rgba(255,255,255,.3)', marginTop:2, letterSpacing:'.03em'}}>{t('س:د:ث','h:m:s')}</div>
               </div>
             </div>
           ) : (
