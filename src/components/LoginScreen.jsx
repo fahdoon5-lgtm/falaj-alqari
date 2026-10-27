@@ -51,7 +51,8 @@ export default function LoginScreen() {
       <div style={{position:'relative',width:'100%',height:220,overflow:'hidden',flexShrink:0}}>
         <img
           src="https://images.unsplash.com/photo-1586348943529-beaae6c28db9?w=800&q=80"
-          alt="فلج"
+          alt=""
+          fetchPriority="high"
           style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'center 60%',filter:'brightness(.55)'}}
           onError={e=>{e.target.style.display='none'}}
         />
@@ -118,13 +119,14 @@ export default function LoginScreen() {
 
         {/* Username */}
         <div className="form-group">
-          <label className="form-label">{t('اسم المستخدم','Username')}</label>
+          <label className="form-label" htmlFor="login-username">{t('اسم المستخدم','Username')}</label>
           <div style={{position:'relative'}}>
             <i className="ti ti-user" style={{
               position:'absolute',top:'50%',transform:'translateY(-50%)',
               [lang==='ar'?'right':'left']:12,
               fontSize:16,color:'var(--c-stone)',pointerEvents:'none'}}/>
             <input
+              id="login-username"
               className="form-input"
               value={username}
               onChange={e=>{setUsername(e.target.value);setError('')}}
@@ -139,13 +141,14 @@ export default function LoginScreen() {
 
         {/* Password */}
         <div className="form-group">
-          <label className="form-label">{t('كلمة المرور','Password')}</label>
+          <label className="form-label" htmlFor="login-password">{t('كلمة المرور','Password')}</label>
           <div style={{position:'relative'}}>
             <i className="ti ti-lock" style={{
               position:'absolute',top:'50%',transform:'translateY(-50%)',
               [lang==='ar'?'right':'left']:12,
               fontSize:16,color:'var(--c-stone)',pointerEvents:'none'}}/>
             <input
+              id="login-password"
               className="form-input"
               type={showPass?'text':'password'}
               value={password}
@@ -154,7 +157,9 @@ export default function LoginScreen() {
               style={{[lang==='ar'?'paddingRight':'paddingLeft']:38,[lang==='ar'?'paddingLeft':'paddingRight']:40}}
               onKeyDown={e=>e.key==='Enter'&&handleLogin()}
             />
-            <button onClick={()=>setShowPass(v=>!v)} style={{
+            <button onClick={()=>setShowPass(v=>!v)}
+              aria-label={t(showPass?'إخفاء كلمة المرور':'إظهار كلمة المرور',showPass?'Hide password':'Show password')}
+              style={{
               position:'absolute',top:'50%',transform:'translateY(-50%)',
               [lang==='ar'?'left':'right']:10,
               background:'none',border:'none',cursor:'pointer',padding:4,
@@ -168,12 +173,14 @@ export default function LoginScreen() {
         <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',
           marginBottom:14,userSelect:'none',direction:lang==='ar'?'rtl':'ltr'}}>
           <div onClick={()=>setRemember(v=>!v)}
-            style={{width:18,height:18,borderRadius:5,flexShrink:0,
+            role="checkbox" aria-checked={remember} tabIndex={0}
+            onKeyDown={e=>(e.key===' '||e.key==='Enter')&&setRemember(v=>!v)}
+            style={{width:24,height:24,borderRadius:5,flexShrink:0,
               border:`2px solid ${remember?'var(--c-water)':'rgba(44,31,14,.25)'}`,
               background:remember?'var(--c-water)':'transparent',
               display:'flex',alignItems:'center',justifyContent:'center',
               transition:'all .15s',cursor:'pointer'}}>
-            {remember && <i className="ti ti-check" style={{fontSize:11,color:'#fff'}}/>}
+            {remember && <i className="ti ti-check" style={{fontSize:13,color:'#fff'}}/>}
           </div>
           <span style={{fontSize:12,color:'var(--c-stone)',lineHeight:1.3}}>
             {t('تذكّرني — لا تسألني عن كلمة المرور في المرة القادمة',
@@ -183,7 +190,7 @@ export default function LoginScreen() {
 
         {/* Error */}
         {error && (
-          <div style={{display:'flex',alignItems:'center',gap:8,
+          <div role="alert" aria-live="assertive" style={{display:'flex',alignItems:'center',gap:8,
             padding:'10px 12px',borderRadius:10,
             background:'rgba(192,57,43,.07)',border:'1px solid rgba(192,57,43,.2)',
             color:'#C0392B',fontSize:12,marginBottom:12}}>

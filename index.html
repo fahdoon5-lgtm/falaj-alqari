@@ -6,7 +6,7 @@
   <title>فلج القري</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.21.0/tabler-icons.min.css"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -34,13 +34,20 @@
       --radius-xl:     24px;
       --shadow-sm:     0 1px 3px rgba(44,31,14,.08);
       --shadow-md:     0 4px 16px rgba(44,31,14,.10);
+      /* aliases for component use */
+      --bg:            #F7F2EA;
+      --text:          #2C1F0E;
+      --accent:        var(--c-water);
+      --accent-a20:    rgba(26,107,138,.20);
+      --border:        rgba(44,31,14,.12);
+      --font-ar:       'IBM Plex Sans Arabic', sans-serif;
     }
     html, body, #root {
       height: 100%;
       font-family: 'IBM Plex Sans Arabic', sans-serif;
       background: var(--c-sand);
       color: var(--c-soil);
-      font-size: 14px;
+      font-size: 16px;
       line-height: 1.6;
     }
     * { -webkit-font-smoothing: antialiased; }

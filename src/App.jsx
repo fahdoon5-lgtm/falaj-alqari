@@ -31,7 +31,6 @@ const SUPER_TABS = [
   { id:'home',         icon:'ti-layout-dashboard', ar:'التحكم',    en:'Control'   },
   { id:'transparency', icon:'ti-eye',              ar:'حصص الفلج', en:'Shares'    },
   { id:'registrations',icon:'ti-user-check',       ar:'التسجيل',   en:'Register'  },
-  { id:'cycle_admin',  icon:'ti-clock-edit',       ar:'الدورة',    en:'Cycle'     },
   { id:'audit',        icon:'ti-shield-check',     ar:'التدقيق',   en:'Audit'     },
   { id:'login_logs',   icon:'ti-clipboard-data',   ar:'السجلات',   en:'Logs'      },
 ]
@@ -102,7 +101,7 @@ function AppShell({ tabs, homeRenderer }) {
             {tabs.find(t=>t.id===activeTab)?.[lang==='ar'?'ar':'en'] || 'الرئيسية'}
           </span>
           {current && <>
-            <span className="breadcrumb-sep"><i className="ti ti-chevron-left" style={{fontSize:9}}/></span>
+            <span className="breadcrumb-sep"><i className={`ti ti-chevron-${lang==='ar'?'left':'right'}`} style={{fontSize:9}}/></span>
             <span className="breadcrumb-item active">{current.title}</span>
           </>}
         </div>
@@ -112,13 +111,14 @@ function AppShell({ tabs, homeRenderer }) {
         {content}
       </PageShell>
 
-      <nav className="bottom-nav">
+      <nav className="bottom-nav" aria-label={t('التنقل الرئيسي','Main navigation')}>
         {tabs.map(tab => (
           <button key={tab.id}
             className={`nav-tab${activeTab===tab.id&&!canGoBack?' active':''}`}
+            aria-current={activeTab===tab.id&&!canGoBack?'page':undefined}
             onClick={()=>{ goTab(tab.id); setShowNotif(false) }}>
             <i className={`ti ${tab.icon}`}/>
-            <span style={{fontSize:9.5}}>{lang==='ar'?tab.ar:tab.en}</span>
+            <span style={{fontSize:11}}>{lang==='ar'?tab.ar:tab.en}</span>
           </button>
         ))}
       </nav>
@@ -186,9 +186,9 @@ function SplashScreen() {
       <div style={{
         width:56, height:56, borderRadius:16,
         background:'var(--accent)', display:'flex', alignItems:'center', justifyContent:'center',
-        fontSize:28, boxShadow:'0 4px 20px var(--accent-a20)',
+        fontSize:28, boxShadow:'0 4px 20px var(--accent-a20)', color:'#fff',
       }}>
-        💧
+        <i className="ti ti-droplet"/>
       </div>
       <div style={{fontFamily:'var(--font-ar)', fontWeight:700, fontSize:18}}>فلج القري</div>
       <div style={{
