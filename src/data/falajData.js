@@ -281,6 +281,13 @@ export const USERS_MOCK = [
     status:'active', language:'ar',
     holderId:null, relationType:null,
   },
+  {
+    id:'u09', fullName:'حمود بن محمد اليعربي',
+    username:'admin2', password:'Admin@2026',
+    phone:'+96896100002', role:'admin',
+    status:'active', language:'ar',
+    holderId:null, relationType:null,
+  },
 ]
 
 export const PENDING_REGISTRATIONS = [
