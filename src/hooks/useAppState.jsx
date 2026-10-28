@@ -37,6 +37,7 @@ const nag = (a) => a ? ({
 
 const nr = (r) => r ? ({
   id: r.id, fullName: r.full_name, phone: r.phone,
+  username: r.username, password: r.password,
   requestedHolderId: r.requested_holder_id, relationType: r.relation_type,
   relationNote: r.relation_note,
   submittedAt: r.submitted_at,
@@ -365,9 +366,10 @@ export function AppProvider({ children }) {
   }
 
   // ── Registration flow ─────────────────────────────────────────────────────
-  const submitRegistration = async ({ fullName, phone, requestedHolderId, relationType, relationNote }) => {
+  const submitRegistration = async ({ fullName, phone, username, password, requestedHolderId, relationType, relationNote }) => {
     const row = {
       full_name: fullName, phone,
+      username, password,
       requested_holder_id: requestedHolderId,
       relation_type: relationType, relation_note: relationNote,
     }
@@ -376,15 +378,21 @@ export function AppProvider({ children }) {
       if (error) return { ok: false, error }
       setPendingRegs(prev => [nr(data), ...prev])
     } else {
-      const local = { ...row, id: `reg_${Date.now()}`, submittedAt: new Date().toISOString() }
-      setPendingRegs(prev => [nr({ ...local, full_name: fullName, requested_holder_id: requestedHolderId, relation_type: relationType, relation_note: relationNote }), ...prev])
+      // Check username uniqueness in offline mode
+      const takenByUser = users.some(u => u.username?.toLowerCase() === username.toLowerCase())
+      const takenByReg  = pendingRegs.some(r => r.username?.toLowerCase() === username.toLowerCase())
+      if (takenByUser || takenByReg) return { ok: false, error: { code: '23505', message: 'unique' } }
+      const local = { ...row, id: `reg_${Date.now()}`, submitted_at: new Date().toISOString() }
+      setPendingRegs(prev => [nr(local), ...prev])
     }
     return { ok: true }
   }
 
-  const approveReg = async (regId, { role, username, password, holderId }) => {
+  const approveReg = async (regId, { role, holderId }) => {
     const reg = pendingRegs.find(r => r.id === regId)
     if (!reg) return
+    const username = reg.username
+    const password = reg.password
 
     if (!OFFLINE) {
       const { data, error } = await supabase.from('app_users').insert({

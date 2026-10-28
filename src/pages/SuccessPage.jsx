@@ -16,22 +16,29 @@ export default function SuccessPage({ registration, onBack }) {
           {t('تم إرسال طلبك!','Request Submitted!')}
         </div>
         <div style={{fontSize:13,color:'rgba(255,255,255,.5)',lineHeight:1.7}}>
-          {t(
-            'سيراجع الأدمن طلبك ويتواصل معك على رقم هاتفك المسجل عند الاعتماد.',
-            'Admin will review your request and contact you on your registered phone when approved.'
-          )}
+          {registration.username
+            ? t(
+                `عند الاعتماد ستتمكن من الدخول بـ @${registration.username} وكلمة المرور التي اخترتها.`,
+                `Once approved, sign in with @${registration.username} and the password you chose.`
+              )
+            : t(
+                'سيراجع الأدمن طلبك ويتواصل معك على رقم هاتفك المسجل عند الاعتماد.',
+                'Admin will review your request and contact you on your registered phone when approved.'
+              )
+          }
         </div>
       </div>
 
       <div style={{background:'rgba(255,255,255,.07)',borderRadius:20,padding:20,width:'100%',maxWidth:360,border:'1px solid rgba(255,255,255,.1)'}}>
         <div style={{fontSize:12,color:'rgba(255,255,255,.4)',marginBottom:14}}>{t('ملخص طلبك','Your Request Summary')}</div>
         {[
-          { label:t('الاسم','Name'),   value:registration.fullName },
-          { label:t('الهاتف','Phone'), value:registration.phone    },
-        ].map((row,i)=>(
+          { label:t('الاسم','Name'),     value:registration.fullName },
+          { label:t('الهاتف','Phone'),   value:registration.phone    },
+          registration.username && { label:t('اسم المستخدم','Username'), value:`@${registration.username}` },
+        ].filter(Boolean).map((row,i)=>(
           <div key={i} style={{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid rgba(255,255,255,.06)',fontSize:13}}>
             <span style={{color:'rgba(255,255,255,.4)'}}>{row.label}</span>
-            <span style={{color:'#fff',fontWeight:500}}>{row.value}</span>
+            <span style={{color:'#fff',fontWeight:500,direction:'ltr'}}>{row.value}</span>
           </div>
         ))}
         <div style={{marginTop:14,background:'rgba(29,158,117,.15)',borderRadius:10,padding:'10px 12px',display:'flex',alignItems:'center',gap:8,fontSize:12,color:'rgba(255,255,255,.7)'}}>

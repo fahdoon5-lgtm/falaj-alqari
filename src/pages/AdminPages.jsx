@@ -91,34 +91,16 @@ const ROLES_FOR_APPROVAL = [
   { id:'admin',       ar:'أدمن',    en:'Admin',        color:'#2D6A2D', icon:'ti-shield-half'  },
 ]
 
-function ApprovalModal({ reg, onConfirm, onClose, t, lang }) {
+function ApprovalModal({ reg, onConfirm, onClose, t, lang, currentUser }) {
   const holder = getHolder(reg.requestedHolderId)
-  const suggestedUsername = reg.fullName
-    .split(' ')
-    .filter(Boolean)
-    .map(w => w[0])
-    .join('')
-    .toLowerCase() + Math.floor(Math.random()*90+10)
+  const isSuperAdmin = currentUser?.role === 'super_admin'
 
-  const [role,     setRole]     = useState('beneficiary')
-  const [username, setUsername] = useState(suggestedUsername)
-  const [password, setPassword] = useState('')
-  const [showPass, setShowPass] = useState(false)
-  const [errors,   setErrors]   = useState({})
-
-  const validate = () => {
-    const e = {}
-    if (!username.trim() || username.trim().length < 3)
-      e.username = t('اسم المستخدم 3 أحرف على الأقل','Username must be at least 3 characters')
-    if (!password || password.length < 6)
-      e.password = t('كلمة المرور 6 خانات على الأقل','Password must be at least 6 characters')
-    setErrors(e)
-    return Object.keys(e).length === 0
-  }
+  // Admin can only assign beneficiary; super_admin can also assign admin
+  const availableRoles = isSuperAdmin ? ROLES_FOR_APPROVAL : ROLES_FOR_APPROVAL.filter(r => r.id !== 'admin')
+  const [role, setRole] = useState('beneficiary')
 
   const confirm = () => {
-    if (!validate()) return
-    onConfirm({ role, username: username.trim(), password })
+    onConfirm({ role })
   }
 
   return (
@@ -164,11 +146,42 @@ function ApprovalModal({ reg, onConfirm, onClose, t, lang }) {
           )}
         </div>
 
+        {/* User's chosen credentials (read-only) */}
+        {reg.username && (
+          <div style={{background:'rgba(45,106,45,.07)',border:'1px solid rgba(45,106,45,.2)',
+            borderRadius:12,padding:'12px 14px',marginBottom:16}}>
+            <div style={{fontSize:11,color:'#2D6A2D',fontWeight:700,marginBottom:8,display:'flex',alignItems:'center',gap:5}}>
+              <i className="ti ti-key" style={{fontSize:13}}/>
+              {t('بيانات الدخول التي اختارها المستخدم','Login credentials chosen by user')}
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:6}}>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:12}}>
+                <span style={{color:'var(--c-stone)'}}>{t('اسم المستخدم:','Username:')}</span>
+                <code style={{color:'var(--c-soil)',fontWeight:700,direction:'ltr'}}>@{reg.username}</code>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:12}}>
+                <span style={{color:'var(--c-stone)'}}>{t('كلمة المرور:','Password:')}</span>
+                <code style={{color:'var(--c-soil)',fontWeight:700,letterSpacing:'.05em'}}>••••••</code>
+              </div>
+            </div>
+            <div style={{marginTop:8,fontSize:11,color:'rgba(45,106,45,.7)',display:'flex',alignItems:'center',gap:5}}>
+              <i className="ti ti-info-circle" style={{fontSize:12}}/>
+              {t('المستخدم يعرف بيانات دخوله — لا حاجة لإعلامه','User already knows their credentials')}
+            </div>
+          </div>
+        )}
+
         {/* Role selector */}
         <div className="form-group">
           <label className="form-label">{t('تعيين الصلاحية','Assign Role')}</label>
+          {!isSuperAdmin && (
+            <div style={{fontSize:11,color:'var(--c-stone)',marginBottom:8,display:'flex',alignItems:'center',gap:5}}>
+              <i className="ti ti-lock" style={{fontSize:12}}/>
+              {t('يمكنك تعيين مستفيد فقط — تعيين الأدمن من صلاحية السوبر أدمن','You can only assign beneficiary — admin role requires super admin')}
+            </div>
+          )}
           <div style={{display:'flex',gap:8}}>
-            {ROLES_FOR_APPROVAL.map(r => (
+            {availableRoles.map(r => (
               <button key={r.id} onClick={()=>setRole(r.id)}
                 style={{flex:1,padding:'10px 8px',borderRadius:12,cursor:'pointer',
                   border: role===r.id ? `2px solid ${r.color}` : '1.5px solid rgba(44,31,14,.12)',
@@ -185,65 +198,13 @@ function ApprovalModal({ reg, onConfirm, onClose, t, lang }) {
           </div>
         </div>
 
-        {/* Username */}
-        <div className="form-group">
-          <label className="form-label">{t('اسم المستخدم','Username')}</label>
-          <input className="form-input" value={username}
-            onChange={e=>{setUsername(e.target.value);setErrors(v=>({...v,username:''}))}}
-            placeholder={t('مثال: khalifa92','e.g. khalifa92')}
-            autoCapitalize="none" autoCorrect="off"/>
-          {errors.username && <div style={{fontSize:11,color:'var(--c-danger)',marginTop:4}}>{errors.username}</div>}
-          <div className="form-hint">{t('يُستخدم لتسجيل الدخول — أخبر المستخدم به','Used to sign in — share this with the user')}</div>
-        </div>
-
-        {/* Password */}
-        <div className="form-group">
-          <label className="form-label">{t('كلمة المرور المؤقتة','Temporary Password')}</label>
-          <div style={{position:'relative'}}>
-            <input className="form-input" type={showPass?'text':'password'}
-              value={password}
-              onChange={e=>{setPassword(e.target.value);setErrors(v=>({...v,password:''}))}}
-              placeholder={t('6 خانات على الأقل','At least 6 characters')}
-              style={{paddingLeft:40}}/>
-            <button onClick={()=>setShowPass(v=>!v)}
-              style={{position:'absolute',top:'50%',transform:'translateY(-50%)',
-                left:10,background:'none',border:'none',cursor:'pointer',
-                color:'var(--c-stone)',fontSize:16,padding:2}}>
-              <i className={`ti ti-eye${showPass?'-off':''}`}/>
-            </button>
-          </div>
-          {errors.password && <div style={{fontSize:11,color:'var(--c-danger)',marginTop:4}}>{errors.password}</div>}
-          <div className="form-hint">{t('سلّمها للمستخدم ليغيرها لاحقاً','Hand it to the user to change later')}</div>
-        </div>
-
-        {/* Credentials preview box */}
-        {username.trim() && password && (
-          <div style={{background:'rgba(45,106,45,.07)',border:'1px solid rgba(45,106,45,.2)',
-            borderRadius:12,padding:'12px 14px',marginBottom:16}}>
-            <div style={{fontSize:11,color:'#2D6A2D',fontWeight:700,marginBottom:8,display:'flex',alignItems:'center',gap:5}}>
-              <i className="ti ti-key" style={{fontSize:13}}/>
-              {t('بيانات الدخول (ستُمنح للمستخدم)','Login credentials (give to user)')}
-            </div>
-            <div style={{display:'flex',flexDirection:'column',gap:6}}>
-              <div style={{display:'flex',justifyContent:'space-between',fontSize:12}}>
-                <span style={{color:'var(--c-stone)'}}>{t('اسم المستخدم:','Username:')}</span>
-                <code style={{color:'var(--c-soil)',fontWeight:700}}>{username.trim()}</code>
-              </div>
-              <div style={{display:'flex',justifyContent:'space-between',fontSize:12}}>
-                <span style={{color:'var(--c-stone)'}}>{t('كلمة المرور:','Password:')}</span>
-                <code style={{color:'var(--c-soil)',fontWeight:700}}>{password}</code>
-              </div>
-            </div>
-          </div>
-        )}
-
         <div style={{display:'flex',gap:10}}>
           <button className="btn btn-outline" style={{flex:1}} onClick={onClose}>
             {t('إلغاء','Cancel')}
           </button>
           <button className="btn btn-palm" style={{flex:2}} onClick={confirm}>
             <i className="ti ti-user-check"/>
-            {t('اعتماد وإنشاء الحساب','Approve & Create Account')}
+            {t('اعتماد وتفعيل الحساب','Approve & Activate Account')}
           </button>
         </div>
       </div>
@@ -252,7 +213,7 @@ function ApprovalModal({ reg, onConfirm, onClose, t, lang }) {
 }
 
 export function RegistrationsPage() {
-  const { t, lang, pendingRegs, approveReg, rejectReg } = useApp()
+  const { t, lang, pendingRegs, approveReg, rejectReg, currentUser } = useApp()
   const [approving, setApproving] = useState(null) // reg being approved
 
   if (pendingRegs.length === 0) return (
@@ -271,6 +232,7 @@ export function RegistrationsPage() {
         <ApprovalModal
           reg={approving}
           t={t} lang={lang}
+          currentUser={currentUser}
           onClose={()=>setApproving(null)}
           onConfirm={(data)=>{ approveReg(approving.id, data); setApproving(null) }}
         />

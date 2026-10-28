@@ -56,8 +56,11 @@ export default function RegisterPage({ onBack, onSuccess }) {
 
   const [form, setForm] = useState({
     fullName: '', phone: '', email: '',
+    username: '', password: '', confirmPassword: '',
     holderId: '', relationType: '', relationNote: '',
   })
+  const [showPass, setShowPass] = useState(false)
+  const [showConfirmPass, setShowConfirmPass] = useState(false)
 
   const set = (k, v) => {
     setForm(f => ({...f, [k]: v}))
@@ -72,6 +75,12 @@ export default function RegisterPage({ onBack, onSuccess }) {
         e.fullName = t('أدخل الاسم كاملاً (اسمان على الأقل)','Enter full name (at least 2 words)')
       if (!form.phone.trim() || !/^[+\d\s]{8,15}$/.test(form.phone.trim()))
         e.phone = t('أدخل رقم هاتف صحيح','Enter a valid phone number')
+      if (!form.username.trim() || form.username.trim().length < 3 || /\s/.test(form.username.trim()))
+        e.username = t('اسم المستخدم 3 أحرف على الأقل بدون مسافات','Username: at least 3 chars, no spaces')
+      if (!form.password || form.password.length < 6)
+        e.password = t('كلمة المرور 6 خانات على الأقل','Password must be at least 6 characters')
+      if (form.confirmPassword !== form.password)
+        e.confirmPassword = t('كلمتا المرور غير متطابقتين','Passwords do not match')
     }
     if (step === 'share') {
       if (!form.holderId)
@@ -97,15 +106,19 @@ export default function RegisterPage({ onBack, onSuccess }) {
     const result = await submitRegistration({
       fullName: form.fullName,
       phone: form.phone,
+      username: form.username.trim(),
+      password: form.password,
       requestedHolderId: form.holderId,
       relationType: form.relationType,
       relationNote: form.relationNote,
     })
     setSubmitting(false)
     if (result?.ok) {
-      onSuccess({ ...form, submittedAt: new Date().toISOString() })
+      onSuccess({ ...form, username: form.username.trim(), submittedAt: new Date().toISOString() })
     } else {
-      setErrors({ submit: t('حدث خطأ، حاول مرة أخرى', 'An error occurred, please try again') })
+      setErrors({ submit: result?.error?.message?.includes('unique') || result?.error?.code === '23505'
+        ? t('اسم المستخدم مأخوذ، اختر اسماً آخر', 'Username taken, choose another')
+        : t('حدث خطأ، حاول مرة أخرى', 'An error occurred, please try again') })
     }
   }
 
@@ -171,6 +184,85 @@ export default function RegisterPage({ onBack, onSuccess }) {
                 placeholder="example@email.com"
                 style={{direction:'ltr',textAlign:'left'}}/>
             </div>
+
+            {/* ─ فاصل: بيانات الدخول ─ */}
+            <div style={{display:'flex',alignItems:'center',gap:8,margin:'4px 0 8px'}}>
+              <div style={{flex:1,height:1,background:'rgba(44,31,14,.1)'}}/>
+              <span style={{fontSize:11,color:'var(--c-stone)',display:'flex',alignItems:'center',gap:5}}>
+                <i className="ti ti-lock" style={{fontSize:12}}/>
+                {t('بيانات الدخول','Login Credentials')}
+              </span>
+              <div style={{flex:1,height:1,background:'rgba(44,31,14,.1)'}}/>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">{t('اسم المستخدم','Username')} *</label>
+              <div style={{position:'relative'}}>
+                <i className="ti ti-at" style={{
+                  position:'absolute',top:'50%',transform:'translateY(-50%)',
+                  [lang==='ar'?'right':'left']:12,
+                  fontSize:16,color:'var(--c-stone)',pointerEvents:'none'}}/>
+                <input className="form-input" value={form.username}
+                  onChange={e=>set('username',e.target.value.toLowerCase().replace(/\s/g,''))}
+                  placeholder={t('مثال: khalifa92','e.g. khalifa92')}
+                  autoCapitalize="none" autoCorrect="off"
+                  style={{[lang==='ar'?'paddingRight':'paddingLeft']:38,direction:'ltr',textAlign:'left'}}/>
+              </div>
+              {errors.username && <div style={{fontSize:11,color:'var(--c-danger)',marginTop:4}}><i className="ti ti-alert-circle" style={{fontSize:11,marginLeft:3}}/>{errors.username}</div>}
+              <div className="form-hint">{t('ستستخدمه لتسجيل الدخول — لا يمكن تغييره لاحقاً','You will use this to sign in — cannot be changed later')}</div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">{t('كلمة المرور','Password')} *</label>
+              <div style={{position:'relative'}}>
+                <i className="ti ti-lock" style={{
+                  position:'absolute',top:'50%',transform:'translateY(-50%)',
+                  [lang==='ar'?'right':'left']:12,
+                  fontSize:16,color:'var(--c-stone)',pointerEvents:'none'}}/>
+                <input className="form-input" type={showPass?'text':'password'}
+                  value={form.password}
+                  onChange={e=>set('password',e.target.value)}
+                  placeholder="••••••••"
+                  style={{[lang==='ar'?'paddingRight':'paddingLeft']:38,[lang==='ar'?'paddingLeft':'paddingRight']:40}}/>
+                <button type="button" onClick={()=>setShowPass(v=>!v)}
+                  style={{position:'absolute',top:'50%',transform:'translateY(-50%)',
+                    [lang==='ar'?'left':'right']:10,
+                    background:'none',border:'none',cursor:'pointer',padding:4,
+                    color:'var(--c-stone)',fontSize:16}}>
+                  <i className={`ti ti-eye${showPass?'-off':''}`}/>
+                </button>
+              </div>
+              {errors.password && <div style={{fontSize:11,color:'var(--c-danger)',marginTop:4}}><i className="ti ti-alert-circle" style={{fontSize:11,marginLeft:3}}/>{errors.password}</div>}
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">{t('تأكيد كلمة المرور','Confirm Password')} *</label>
+              <div style={{position:'relative'}}>
+                <i className="ti ti-lock-check" style={{
+                  position:'absolute',top:'50%',transform:'translateY(-50%)',
+                  [lang==='ar'?'right':'left']:12,
+                  fontSize:16,color:'var(--c-stone)',pointerEvents:'none'}}/>
+                <input className="form-input" type={showConfirmPass?'text':'password'}
+                  value={form.confirmPassword}
+                  onChange={e=>set('confirmPassword',e.target.value)}
+                  placeholder="••••••••"
+                  style={{[lang==='ar'?'paddingRight':'paddingLeft']:38,[lang==='ar'?'paddingLeft':'paddingRight']:40}}/>
+                <button type="button" onClick={()=>setShowConfirmPass(v=>!v)}
+                  style={{position:'absolute',top:'50%',transform:'translateY(-50%)',
+                    [lang==='ar'?'left':'right']:10,
+                    background:'none',border:'none',cursor:'pointer',padding:4,
+                    color:'var(--c-stone)',fontSize:16}}>
+                  <i className={`ti ti-eye${showConfirmPass?'-off':''}`}/>
+                </button>
+              </div>
+              {errors.confirmPassword && <div style={{fontSize:11,color:'var(--c-danger)',marginTop:4}}><i className="ti ti-alert-circle" style={{fontSize:11,marginLeft:3}}/>{errors.confirmPassword}</div>}
+            </div>
+
+            {errors.submit && (
+              <div style={{fontSize:12,color:'var(--c-danger)',padding:'8px 12px',background:'rgba(192,57,43,.07)',borderRadius:8,border:'1px solid rgba(192,57,43,.2)',display:'flex',alignItems:'center',gap:6}}>
+                <i className="ti ti-alert-circle" style={{fontSize:14,flexShrink:0}}/>{errors.submit}
+              </div>
+            )}
           </div>
         )}
 
@@ -312,11 +404,12 @@ export default function RegisterPage({ onBack, onSuccess }) {
 
             {/* ملخص */}
             {[
-              { icon:'ti-user',            label:t('الاسم','Name'),        value:form.fullName },
-              { icon:'ti-phone',           label:t('الهاتف','Phone'),      value:form.phone    },
-              { icon:'ti-mail',            label:t('البريد','Email'),      value:form.email||t('—','—') },
-              { icon:'ti-droplet',         label:t('الحصة','Share'),       value:holder?.name  },
-              { icon:'ti-heart-handshake', label:t('الصلة','Relation'),    value:RELATION_TYPES.find(r=>r.id===form.relationType)?.[lang==='ar'?'ar':'en'] },
+              { icon:'ti-user',            label:t('الاسم','Name'),           value:form.fullName },
+              { icon:'ti-phone',           label:t('الهاتف','Phone'),         value:form.phone    },
+              { icon:'ti-at',              label:t('اسم المستخدم','Username'), value:form.username },
+              { icon:'ti-mail',            label:t('البريد','Email'),         value:form.email||t('—','—') },
+              { icon:'ti-droplet',         label:t('الحصة','Share'),          value:holder?.name  },
+              { icon:'ti-heart-handshake', label:t('الصلة','Relation'),       value:RELATION_TYPES.find(r=>r.id===form.relationType)?.[lang==='ar'?'ar':'en'] },
             ].map((row,i) => (
               <div key={i} style={{display:'flex',alignItems:'flex-start',gap:10,padding:'9px 0',borderBottom:'1px solid rgba(44,31,14,.06)'}}>
                 <div style={{width:30,height:30,borderRadius:'50%',background:'rgba(26,107,138,.08)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
@@ -340,8 +433,8 @@ export default function RegisterPage({ onBack, onSuccess }) {
               <i className="ti ti-clock" style={{fontSize:15,flexShrink:0}}/>
               <span style={{fontSize:12}}>
                 {t(
-                  'سيراجع الأدمن طلبك ويتواصل معك على رقم هاتفك عند الاعتماد.',
-                  'Admin will review your request and contact you on your phone when approved.'
+                  `عند الاعتماد ستتمكن من الدخول بـ @${form.username} وكلمة المرور التي اخترتها.`,
+                  `Once approved you can sign in with @${form.username} and your chosen password.`
                 )}
               </span>
             </div>
