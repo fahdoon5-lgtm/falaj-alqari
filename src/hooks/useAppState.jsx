@@ -97,6 +97,12 @@ export function AppProvider({ children }) {
   useEffect(() => { OFFLINE ? bootOffline() : bootOnline() }, [])
 
   // ── ONLINE boot ────────────────────────────────────────────────────────────
+  // Rejects after `ms` ms so a paused/unreachable Supabase falls back gracefully
+  const _withTimeout = (promise, ms) => Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('supabase_timeout')), ms))
+  ])
+
   const bootOnline = async () => {
     try {
       // 1. Restore session
@@ -114,12 +120,12 @@ export function AppProvider({ children }) {
       }
       if (me) setCurrentUser(me)
 
-      // 2. Load all shared tables in parallel
+      // 2. Load all shared tables in parallel (8 s timeout — guards against paused project)
       const [
         { data: uData }, { data: rData }, { data: aData },
         { data: lData }, { data: hData }, { data: ncrData },
         { data: agData },
-      ] = await Promise.all([
+      ] = await _withTimeout(Promise.all([
         supabase.from('app_users').select('*').order('created_at'),
         supabase.from('pending_registrations').select('*').order('submitted_at', { ascending: false }),
         supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(300),
@@ -127,7 +133,7 @@ export function AppProvider({ children }) {
         supabase.from('holder_name_overrides').select('*'),
         supabase.from('name_change_requests').select('*').order('created_at', { ascending: false }),
         supabase.from('share_agreements').select('*').order('created_at', { ascending: false }),
-      ])
+      ]), 8000)
 
       setUsers((uData || []).map(nu))
       setPendingRegs((rData || []).map(nr))
