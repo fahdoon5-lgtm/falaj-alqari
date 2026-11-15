@@ -55,9 +55,13 @@ function saveToLS(settings) {
 export function CycleProvider({ children }) {
   // ابدأ من localStorage حتى يحمّل Supabase
   const [settings, setSettings] = useState(() => loadFromLS())
-  const [loading, setLoading] = useState(SUPABASE_READY)
+  const [loading, setLoading]   = useState(SUPABASE_READY)
+  // null=جاري | true=موجود | 'restored'=أُعيد من LS | false=مفقود ولا نسخة
+  const [dbSynced, setDbSynced] = useState(null)
 
   // قراءة الإعداد من Supabase عند التحميل
+  // إذا كان صف cycle_settings فارغاً (مثلاً بعد إعادة تفعيل Supabase)،
+  // يُستعاد الإعداد تلقائياً من localStorage
   useEffect(() => {
     if (!SUPABASE_READY) return
     let cancelled = false
@@ -74,10 +78,29 @@ export function CycleProvider({ children }) {
 
       const parsed = parseSettings(data)
       if (parsed) {
+        // Supabase لديه بيانات صحيحة
         setSettings(parsed)
         saveToLS(parsed)
+        if (!cancelled) setDbSynced(true)
+      } else {
+        // الصف فارغ أو مفقود — استعادة من localStorage إن وُجد
+        const ls = loadFromLS()
+        if (ls && !cancelled) {
+          setSettings(ls)   // الواجهة تعمل فوراً
+          // إعادة كتابة الصف في Supabase
+          await supabase.from('cycle_settings').upsert({
+            id: 1,
+            current_aad_id: ls.currentAadId,
+            aad_started_at: ls.aadStartedAt.toISOString(),
+            updated_by:     (ls.updatedBy || 'auto-restore') + ' [restored]',
+            updated_at:     new Date().toISOString(),
+          })
+          if (!cancelled) setDbSynced('restored')
+        } else if (!cancelled) {
+          setDbSynced(false)
+        }
       }
-      setLoading(false)
+      if (!cancelled) setLoading(false)
     }
 
     fetchSettings()
@@ -129,7 +152,7 @@ export function CycleProvider({ children }) {
   }
 
   return (
-    <CycleCtx.Provider value={{ cycleStart, settings, saveCycleSettings, loading }}>
+    <CycleCtx.Provider value={{ cycleStart, settings, saveCycleSettings, loading, dbSynced }}>
       {children}
     </CycleCtx.Provider>
   )

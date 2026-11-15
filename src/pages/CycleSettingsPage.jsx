@@ -33,7 +33,7 @@ function fmtShort(d) {
 
 export default function CycleSettingsPage() {
   const { t, currentUser } = useApp()
-  const { cycleStart, settings, saveCycleSettings } = useCycle()
+  const { cycleStart, settings, saveCycleSettings, dbSynced } = useCycle()
 
   const [now, setNow] = useState(new Date())
   useEffect(() => {
@@ -188,6 +188,30 @@ export default function CycleSettingsPage() {
           <span style={{fontWeight:600}}>
             {t('لم تُضبط الدورة بعد — حدد الدورة الحالية أدناه.',
                'Cycle not set yet — select the current cycle below.')}
+          </span>
+        </div>
+      )}
+
+      {/* ── بانر حالة Supabase (يظهر فقط عند الاسترداد أو الغياب) ── */}
+      {dbSynced === 'restored' && (
+        <div className="info-box" style={{background:'rgba(29,158,117,.08)',borderColor:'rgba(29,158,117,.25)',color:'#1D9E75'}}>
+          <i className="ti ti-database-check" style={{fontSize:16,flexShrink:0}}/>
+          <span style={{fontSize:12}}>
+            {t(
+              'تم استرداد إعدادات الدورة من النسخة المحلية وإعادة حفظها في Supabase تلقائياً.',
+              'Cycle settings were auto-restored from local backup and re-synced to Supabase.'
+            )}
+          </span>
+        </div>
+      )}
+      {dbSynced === false && (
+        <div className="warn-box">
+          <i className="ti ti-database-exclamation" style={{fontSize:16,flexShrink:0}}/>
+          <span style={{fontSize:12}}>
+            {t(
+              'Supabase متاح لكن لا يوجد إعداد محفوظ — حدد الدورة أدناه واحفظها.',
+              'Supabase is available but no saved cycle was found — set the cycle below and save.'
+            )}
           </span>
         </div>
       )}
