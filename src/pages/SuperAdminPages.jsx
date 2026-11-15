@@ -1,13 +1,17 @@
 import { useState, useRef } from 'react'
 import { useApp } from '../hooks/useAppState'
 import { useCycle } from '../hooks/useCycleSettings'
-import { AAD_DAYS, SHARE_HOLDERS } from '../data/falajData'
+import { useNav } from '../hooks/useNavigation'
+import { AAD_DAYS, SHARE_HOLDERS, SHARES } from '../data/falajData'
 import { getCurrentAadInfo, formatCountdown } from '../utils/cycleEngine'
+import { getHolder, initials, holderColor } from '../utils/helpers'
 
 export function SuperAdminHome({ onTab }) {
-  const { t, pendingRegs, users, pendingAgreementsForAdmin } = useApp()
+  const { t, pendingRegs, users, pendingAgreementsForAdmin, setViewAsUser } = useApp()
   const { cycleStart, settings } = useCycle()
+  const { goTab } = useNav()
   const [now] = useState(new Date())
+  const [viewAsQuery, setViewAsQuery] = useState('')
   const info = getCurrentAadInfo(cycleStart, now)
 
   const activeUsers   = users.filter(u => u.status === 'active' && u.role !== 'super_admin')
@@ -120,6 +124,98 @@ export function SuperAdminHome({ onTab }) {
           <div style={{flex:1,borderRadius:12,padding:'10px 12px',background:'rgba(45,106,45,.07)',border:'1px solid rgba(45,106,45,.15)',textAlign:'center'}}>
             <div style={{fontSize:18,fontWeight:700,color:'#2D6A2D'}}>{admins.length}</div>
             <div style={{fontSize:10,color:'var(--c-stone)',marginTop:2}}>{t('مديرون','Admins')}</div>
+          </div>
+        </div>
+      )}
+
+      {/* ── View as Beneficiary ── */}
+      {beneficiaries.length > 0 && (
+        <div>
+          <div className="section-lbl">{t('تصفح كمستفيد','View as Beneficiary')}</div>
+          <div className="card">
+            <div className="card-body" style={{display:'flex',flexDirection:'column',gap:8}}>
+              {/* Search input */}
+              <div style={{position:'relative'}}>
+                <i className="ti ti-search" style={{position:'absolute',top:'50%',transform:'translateY(-50%)',
+                  right:10,fontSize:14,color:'var(--c-stone)',pointerEvents:'none'}}/>
+                <input
+                  type="text"
+                  value={viewAsQuery}
+                  onChange={e=>setViewAsQuery(e.target.value)}
+                  placeholder={t('ابحث عن مستفيد...','Search beneficiary...')}
+                  style={{width:'100%',padding:'8px 32px 8px 10px',borderRadius:10,
+                    border:'1px solid var(--c-border)',background:'var(--c-surface)',
+                    color:'var(--c-soil)',fontSize:13,boxSizing:'border-box',
+                    outline:'none'}}
+                />
+              </div>
+              {/* Beneficiary list */}
+              {beneficiaries
+                .filter(u => {
+                  if (!viewAsQuery.trim()) return true
+                  const q = viewAsQuery.toLowerCase()
+                  return (u.fullName||'').toLowerCase().includes(q) ||
+                         (u.username||'').toLowerCase().includes(q) ||
+                         (u.holderId||'').toLowerCase().includes(q)
+                })
+                .map(u => {
+                  const holder = u.holderId ? getHolder(u.holderId) : null
+                  const ini    = initials(u.fullName || u.username || '?')
+                  const color  = holderColor(u.holderId || u.id)
+                  return (
+                    <button key={u.id}
+                      onClick={() => { setViewAsUser(u); goTab('home') }}
+                      style={{display:'flex',alignItems:'center',gap:10,width:'100%',
+                        padding:'8px 10px',borderRadius:12,border:'1px solid var(--c-border)',
+                        background:'var(--c-surface)',cursor:'pointer',textAlign:'right',
+                        transition:'background .15s'}}
+                      onMouseEnter={e=>e.currentTarget.style.background='var(--c-hover)'}
+                      onMouseLeave={e=>e.currentTarget.style.background='var(--c-surface)'}>
+                      {/* Avatar / initials */}
+                      <div style={{width:36,height:36,borderRadius:'50%',flexShrink:0,
+                        overflow:'hidden',display:'flex',alignItems:'center',
+                        justifyContent:'center',
+                        background: u.avatar ? 'transparent' : color,
+                        border:`2px solid ${color}40`}}>
+                        {u.avatar
+                          ? <img src={u.avatar} alt={u.fullName}
+                              style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+                          : <span style={{fontSize:12,fontWeight:700,color:'#fff'}}>{ini}</span>}
+                      </div>
+                      {/* Name + holder info */}
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:13,fontWeight:600,color:'var(--c-soil)',
+                          whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                          {u.fullName || u.username}
+                        </div>
+                        {holder && (
+                          <div style={{fontSize:11,color:'var(--c-stone)',marginTop:1}}>
+                            {holder.name} · {t('حصص','shares')}: {holder.shares}
+                          </div>
+                        )}
+                      </div>
+                      {/* Eye icon */}
+                      <div style={{width:30,height:30,borderRadius:'50%',
+                        background:'rgba(200,132,26,.12)',
+                        display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                        <i className="ti ti-eye" style={{fontSize:14,color:'#C8841A'}}/>
+                      </div>
+                    </button>
+                  )
+                })
+              }
+              {beneficiaries.filter(u => {
+                if (!viewAsQuery.trim()) return true
+                const q = viewAsQuery.toLowerCase()
+                return (u.fullName||'').toLowerCase().includes(q) ||
+                       (u.username||'').toLowerCase().includes(q) ||
+                       (u.holderId||'').toLowerCase().includes(q)
+              }).length === 0 && (
+                <div style={{textAlign:'center',padding:'16px 0',color:'var(--c-stone)',fontSize:13}}>
+                  {t('لا توجد نتائج','No results found')}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

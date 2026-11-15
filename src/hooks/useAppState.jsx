@@ -84,6 +84,7 @@ export function AppProvider({ children }) {
   const [lang, setLang] = useState('ar')
   const [appReady, setAppReady]   = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
+  const [viewAsUser,  setViewAsUser]  = useState(null)   // super-admin impersonation
   const [users,       setUsers]       = useState([])
   const [pendingRegs, setPendingRegs] = useState([])
   const [notifications, setNotifications] = useState([])
@@ -581,10 +582,23 @@ export function AppProvider({ children }) {
   })
   const pendingAgreementsForAdmin = agreements.filter(a => a.status === 'pending_admin')
 
+  // ── logout also clears any active impersonation ──────────────────────────────
+  const logoutAndClear = async () => {
+    setViewAsUser(null)
+    await logout()
+  }
+
   return (
     <AppCtx.Provider value={{
       appReady, isOffline: OFFLINE,
-      currentUser, login, loginWithCredentials, logout,
+      // effective currentUser = impersonated user OR the real logged-in user
+      currentUser: viewAsUser || currentUser,
+      // always the real authenticated admin (for TopBar name/avatar and routing)
+      realAdminUser: currentUser,
+      viewAsUser,
+      setViewAsUser,
+      clearViewAs: () => setViewAsUser(null),
+      login, loginWithCredentials, logout: logoutAndClear,
       users, loginLogs,
       updateAvatar, updateUserName, updatePhone,
       broadcastNotif, submitRegistration,
