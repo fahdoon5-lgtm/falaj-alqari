@@ -50,6 +50,7 @@ function timeStrToMins(t) {
 /**
  * حساب الوقت الحقيقي لحصة معينة داخل آد
  * الآد يبدأ 11:30 — أي وقت قبل 11:30 يكون في اليوم التالي
+ * @deprecated استخدم resolveAadShares بدلاً منه (يدعم ساعة 12h بشكل صحيح)
  */
 export function resolveShareTimes(aadStartDate, startTimeStr, endTimeStr) {
   const AAD_OFFSET_MINS = 11 * 60 + 30  // 11:30
@@ -76,6 +77,49 @@ export function resolveShareTimes(aadStartDate, startTimeStr, endTimeStr) {
 }
 
 /**
+ * حساب الأوقات الحقيقية لجميع حصص آد بشكل متسلسل
+ *
+ * يعالج نظام ساعة 12 ساعة الذي تستخدمه بيانات الفلج:
+ * - الآد يبدأ 11:30 مساءً وينقسم إلى نصفين بـ 12 ساعة
+ * - كلا النصفين يبدآن بـ "11:30" (الأول: 11:30م، الثاني: 11:30ص)
+ * - prevEndDiff يميّز بين "11:30 بداية الآد" و"11:30 منتصف الآد"
+ */
+export function resolveAadShares(aadStartDate, shares) {
+  const AAD_OFFSET_MINS = 11 * 60 + 30   // 690 — 11:30 نقطة البداية
+  const AAD_HALF_MINS   = 12 * 60         // 720 — 12 ساعة بالدقائق
+
+  let prevEndDiff = 0
+
+  return shares.map(share => {
+    const startMins = timeStrToMins(share.startTime)
+    const endMins   = timeStrToMins(share.endTime)
+
+    // الفرق الأساسي عن بداية الآد
+    let startDiff = startMins >= AAD_OFFSET_MINS
+      ? startMins - AAD_OFFSET_MINS
+      : startMins + AAD_HALF_MINS - AAD_OFFSET_MINS
+
+    // إذا بدأت الحصة قبل نهاية السابقة → تقع في النصف الثاني
+    if (startDiff < prevEndDiff) startDiff += AAD_HALF_MINS
+
+    let endDiff = endMins >= AAD_OFFSET_MINS
+      ? endMins - AAD_OFFSET_MINS
+      : endMins + AAD_HALF_MINS - AAD_OFFSET_MINS
+
+    // النهاية قبل أو مساوية البداية → تقع في النصف التالي
+    if (endDiff <= startDiff) endDiff += AAD_HALF_MINS
+
+    prevEndDiff = endDiff
+
+    return {
+      ...share,
+      realStart: new Date(aadStartDate.getTime() + startDiff * 60_000),
+      realEnd:   new Date(aadStartDate.getTime() + endDiff   * 60_000),
+    }
+  })
+}
+
+/**
  * كل أدوار مستفيد في الدورة الحالية مع تواريخ حقيقية
  */
 export function getMyTurns(holderId, cycleStart, now = new Date()) {
@@ -90,22 +134,25 @@ export function getMyTurns(holderId, cycleStart, now = new Date()) {
   )
 
   return AAD_DAYS.flatMap((day, idx) => {
-    const shares = (SHARES[day.id] || []).filter(s => s.holderId === holderId)
-    if (!shares.length) return []
+    const allShares = SHARES[day.id] || []
+    if (!allShares.length) return []
     const aadStart = new Date(thisCycleStart.getTime() + idx * AAD_DURATION_MS)
-    return shares.map(share => {
-      const times  = resolveShareTimes(aadStart, share.startTime, share.endTime)
-      const isPast = times.end < now
-      const isNow  = times.start <= now && now < times.end
-      const isSoon = !isPast && !isNow && (times.start - now) < 24 * 3600_000
-      return {
-        day, share, aadStart,
-        realStart: times.start,
-        realEnd:   times.end,
-        isPast, isNow, isSoon,
-        msUntil: Math.max(0, times.start - now),
-      }
-    })
+    // حل الأوقات على الكل أولاً (السياق المتسلسل ضروري)، ثم نصفّي للمستفيد
+    const resolved = resolveAadShares(aadStart, allShares)
+    return resolved
+      .filter(s => s.holderId === holderId)
+      .map(s => {
+        const isPast = s.realEnd < now
+        const isNow  = s.realStart <= now && now < s.realEnd
+        const isSoon = !isPast && !isNow && (s.realStart - now) < 24 * 3600_000
+        return {
+          day, share: s, aadStart,
+          realStart: s.realStart,
+          realEnd:   s.realEnd,
+          isPast, isNow, isSoon,
+          msUntil: Math.max(0, s.realStart - now),
+        }
+      })
   }).sort((a, b) => a.realStart - b.realStart)
 }
 

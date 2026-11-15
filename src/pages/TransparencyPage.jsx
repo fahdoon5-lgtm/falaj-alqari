@@ -3,7 +3,7 @@ import { useApp } from '../hooks/useAppState'
 import { useCycle } from '../hooks/useCycleSettings'
 import { AAD_DAYS, SHARES } from '../data/falajData'
 import { getHolder, holderColor, initials } from '../utils/helpers'
-import { getCurrentAadInfo, resolveShareTimes, formatCountdown } from '../utils/cycleEngine'
+import { getCurrentAadInfo, resolveAadShares, formatCountdown } from '../utils/cycleEngine'
 
 export default function TransparencyPage() {
   const { currentUser, t } = useApp()
@@ -24,9 +24,13 @@ export default function TransparencyPage() {
   let nowTimes = null
   if (info && CURRENT_AAD) {
     const aadShares = SHARES[CURRENT_AAD] || []
-    for (const s of aadShares) {
-      const times = resolveShareTimes(info.aadStartTime, s.startTime, s.endTime)
-      if (times.start <= now && now < times.end) { NOW_ORDER = s.order; nowTimes = times; break }
+    const resolved = resolveAadShares(info.aadStartTime, aadShares)
+    for (const s of resolved) {
+      if (s.realStart <= now && now < s.realEnd) {
+        NOW_ORDER = s.order
+        nowTimes = { start: s.realStart, end: s.realEnd }
+        break
+      }
     }
   }
 
